@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
-import { useUserProfile } from "./UserProfileContext";
+// import { useUserProfile } from "./UserProfileContext"; // Removido para evitar dependência circular
 
 export interface Pet {
   id: string;
@@ -35,8 +35,12 @@ interface PetContextType {
 
 const PetContext = createContext<PetContextType | undefined>(undefined);
 
+// Importação movida para dentro do PetProvider para evitar dependência circular
+import { useUserProfile } from "./UserProfileContext";
+
 export const PetProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile(); // Chamada movida para aqui
 
   const [myPets, setMyPets] = useState<Pet[]>([]);
   const [currentPet, setCurrentPet] = useState<Pet | null>(null);
@@ -69,7 +73,14 @@ export const PetProvider = ({ children }: { children: ReactNode }) => {
     if (profile?.account_type === 'professional') {
       setCurrentPet(null);
     } else {
-      setCurrentPet(data?.[0] ?? null);
+      // Se o pet recém-criado for o único, ele deve ser o currentPet
+      if (data && data.length > 0) {
+        // Tenta manter o pet atual, se existir, senão usa o primeiro da lista
+        const selectedPet = currentPet && data.find(p => p.id === currentPet.id) ? currentPet : data[0];
+        setCurrentPet(selectedPet);
+      } else {
+        setCurrentPet(null);
+      }
     }
   };
 
@@ -98,8 +109,7 @@ export const PetProvider = ({ children }: { children: ReactNode }) => {
     const { data: rows } = await supabase
       .from("followers")
       .select("target_pet_id")
-      .eq("follower_id", petId)
-      .eq("is_user_follower", false);
+      .eq("follower_id", petId);
 
     if (!rows?.length) {
       setFollowing([]);
@@ -195,8 +205,6 @@ export const PetProvider = ({ children }: { children: ReactNode }) => {
     await loadAllPets();
     setLoading(false);
   };
-
-  const { profile, loading: profileLoading } = useUserProfile();
 
   useEffect(() => {
     if (user === undefined || profileLoading) return; // Espera o Auth e o Profile carregarem

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getAllServiceProviders } from '@/integrations/supabase/serviceProvidersService';
+import { getAllProfessionalProfiles, UserProfile } from '@/integrations/supabase/userProfilesService';
 import { UserProfile } from '@/integrations/supabase/userProfilesService';
 import { Database } from '@/integrations/supabase/types';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -11,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import ServiceProviderCard from '@/components/Services/ServiceProviderCard';
+import ProfessionalProfileCard from '@/components/Services/ProfessionalProfileCard';
 import { getUserLocation, filterProvidersByDistance, Location } from '@/integrations/supabase/geolocationService';
 
 // Tipos do Supabase
-type ServiceProvider = Database['public']['Tables']['service_providers']['Row'];
+// type ServiceProvider = Database['public']['Tables']['service_providers']['Row'];
 type ServiceType = Database['public']['Enums']['service_type'];
 
 const serviceTypeOptions: { value: ServiceType | 'all'; label: string }[] = [
@@ -36,10 +36,10 @@ const ServiceProvidersPage: React.FC = () => {
   const { toast } = useToast();
 
   // 1. Busca de dados
-  const { data: providers, isLoading } = useQuery<ServiceProvider[]>({
-    queryKey: ['serviceProviders'],
+  const { data: providers, isLoading } = useQuery<UserProfile[]>({
+    queryKey: ['professionalProfiles'],
     queryFn: async () => {
-      const { data, error } = await getAllServiceProviders();
+      const { data, error } = await getAllProfessionalProfiles();
       if (error) throw new Error(error.message);
       return data || [];
     },
@@ -84,7 +84,9 @@ const ServiceProvidersPage: React.FC = () => {
 
     // Filtro por Distancia (se localizacao do usuario foi obtida)
     if (userLocation) {
-      filtered = filterProvidersByDistance(filtered, userLocation, maxDistance);
+      // O filtro de distância espera professional_latitude e professional_longitude, que estão em UserProfile.
+      // O tipo T na função filterProvidersByDistance é genérico, então deve funcionar.
+      filtered = filterProvidersByDistance(filtered, userLocation, maxDistance as number);
     }
 
     return filtered;
@@ -177,7 +179,7 @@ const ServiceProvidersPage: React.FC = () => {
         ) : filteredProviders.length > 0 ? (
           <div className="grid gap-4">
             {filteredProviders.map(provider => (
-              <ServiceProviderCard key={provider.id} provider={provider} />
+              <ProfessionalProfileCard key={provider.id} profile={provider} />
             ))}
           </div>
         ) : (

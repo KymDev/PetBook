@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 	import { z } from "zod";
 	import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 	import { Loader2, Upload, PawPrint, Save, Trash2 } from "lucide-react";
@@ -404,41 +405,45 @@ const EditPet = () => {
 	                )}
 	              </Button>
 	
-	              <AlertDialog>
-	                <AlertDialogTrigger asChild>
-	                  <Button
-	                    type="button"
-	                    variant="outline"
-	                    className="w-full border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
-	                    size="lg"
-	                  >
-	                    <Trash2 className="h-4 w-4 mr-2" />
-	                    Excluir Pet
-	                  </Button>
-	                </AlertDialogTrigger>
-	                <AlertDialogContent>
-	                  <AlertDialogHeader>
-	                    <AlertDialogTitle>Tem certeza que deseja excluir {initialPet.name}?</AlertDialogTitle>
-	                    <AlertDialogDescription>
-	                      Esta ação é irreversível. Todos os dados, posts e interações de {initialPet.name} serão permanentemente removidos.
-	                    </AlertDialogDescription>
-	                  </AlertDialogHeader>
-	                  <AlertDialogFooter>
-	                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-	                    <AlertDialogAction
-	                      onClick={handleDelete}
-	                      className="bg-red-500 hover:bg-red-600"
-	                      disabled={isSaving}
-	                    >
-	                      {isSaving ? (
-	                        <Loader2 className="h-4 w-4 animate-spin" />
-	                      ) : (
-	                        "Excluir Permanentemente"
-	                      )}
-	                    </AlertDialogAction>
-	                  </AlertDialogFooter>
-	                </AlertDialogContent>
-	              </AlertDialog>
+		              <AlertDialog>
+		                <AlertDialogTrigger asChild>
+		                  <Button
+		                    type="button"
+		                    variant="outline"
+		                    className="w-full border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
+		                    size="lg"
+		                  >
+		                    <Trash2 className="h-4 w-4 mr-2" />
+		                    Deletar Pet
+		                  </Button>
+		                </AlertDialogTrigger>
+		                <AlertDialogContent>
+		                  <AlertDialogHeader>
+		                    <AlertDialogTitle>Tem certeza que deseja excluir {initialPet.name}?</AlertDialogTitle>
+		                    <AlertDialogDescription>
+		                      Esta ação é irreversível. Todos os dados, posts e interações de {initialPet.name} serão permanentemente removidos.
+		                    </AlertDialogDescription>
+		                  </AlertDialogHeader>
+		                  <AlertDialogFooter>
+		                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+		                    <AlertDialogAction
+		                      onClick={handleDelete}
+		                      className="bg-red-500 hover:bg-red-600"
+		                      disabled={isSaving}
+		                    >
+		                      {isSaving ? (
+		                        <Loader2 className="h-4 w-4 animate-spin" />
+		                      ) : (
+		                        "Excluir Permanentemente"
+		                      )}
+		                    </AlertDialogAction>
+		                  </AlertDialogFooter>
+		                </AlertDialogContent>
+		              </AlertDialog>
+		              
+		              <div className="pt-4 border-t border-border mt-4">
+		                <DeleteAccountModal isProfessional={false} />
+		              </div>
             </form>
           </CardContent>
         </Card>

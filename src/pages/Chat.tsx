@@ -2,49 +2,111 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet, Pet } from "@/contexts/PetContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Stethoscope } from "lucide-react";
 
 interface ChatRoom {
   id: string;
   pet_1: string;
   pet_2: string;
   created_at: string;
-  otherPet?: Pet;
+  is_professional_chat?: boolean;
+  otherParty?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    isProfessional: boolean;
+    subtitle?: string;
+  };
 }
 
 const Chat = () => {
   const { currentPet } = usePet();
+  const { user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentPet) fetchRooms();
-  }, [currentPet]);
+    if (currentPet || user) fetchRooms();
+  }, [currentPet, user]);
 
   const fetchRooms = async () => {
-    if (!currentPet) return;
+    if (!user) return;
 
-    const { data } = await supabase
+    // Busca salas onde o pet atual está envolvido OU onde o usuário (se profissional) está envolvido
+    const query = currentPet 
+      ? `pet_1.eq.${currentPet.id},pet_2.eq.${currentPet.id},pet_2.eq.${user.id}`
+      : `pet_2.eq.${user.id}`;
+
+    const { data, error } = await supabase
       .from("chat_rooms")
       .select("*")
-      .or(`pet_1.eq.${currentPet.id},pet_2.eq.${currentPet.id}`);
+      .or(query);
+
+    if (error) {
+      console.error("Erro ao buscar salas de chat:", error);
+      setLoading(false);
+      return;
+    }
 
     if (data) {
-      const roomsWithPets = await Promise.all(
+      const roomsWithDetails = await Promise.all(
         data.map(async (room) => {
-          const otherPetId = room.pet_1 === currentPet.id ? room.pet_2 : room.pet_1;
+          // Determina quem é a outra parte
+          const isPet1Me = currentPet && room.pet_1 === currentPet.id;
+          const isPet2Me = (currentPet && room.pet_2 === currentPet.id) || (room.pet_2 === user.id);
+          
+          const otherId = isPet1Me ? room.pet_2 : room.pet_1;
+
+          // Tenta buscar como Pet primeiro
           const { data: petData } = await supabase
             .from("pets")
-            .select("*")
-            .eq("id", otherPetId)
-            .single();
-          return { ...room, otherPet: petData };
+            .select("id, name, avatar_url, guardian_instagram_username")
+            .eq("id", otherId)
+            .maybeSingle();
+
+          if (petData) {
+            return {
+              ...room,
+              otherParty: {
+                id: petData.id,
+                name: petData.name,
+                avatar_url: petData.avatar_url,
+                isProfessional: false,
+                subtitle: `@${petData.guardian_instagram_username}`
+              }
+            };
+          }
+
+          // Se não for pet, tenta buscar como Profissional (User Profile)
+          const { data: profileData } = await supabase
+            .from("user_profiles")
+            .select("id, full_name, professional_avatar_url, professional_service_type")
+            .eq("id", otherId)
+            .maybeSingle();
+
+          if (profileData) {
+            return {
+              ...room,
+              otherParty: {
+                id: profileData.id,
+                name: profileData.full_name || "Profissional",
+                avatar_url: profileData.professional_avatar_url,
+                isProfessional: true,
+                subtitle: profileData.professional_service_type || "Profissional de Serviço"
+              }
+            };
+          }
+
+          return { ...room };
         })
       );
-      setRooms(roomsWithPets);
+      
+      // Filtra salas que não conseguimos identificar a outra parte
+      setRooms(roomsWithDetails.filter(r => r.otherParty) as ChatRoom[]);
     }
     setLoading(false);
   };
@@ -66,23 +128,35 @@ const Chat = () => {
               <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground">Nenhuma conversa ainda</p>
               <p className="text-sm text-muted-foreground">
-                Visite o perfil de um pet para iniciar um chat
+                Inicie uma conversa visitando o perfil de um pet ou profissional
               </p>
             </CardContent>
           </Card>
         ) : (
           rooms.map((room) => (
-            <Link key={room.id} to={`/chat/${room.otherPet?.id}`}>
+            <Link 
+              key={room.id} 
+              to={room.otherParty?.isProfessional ? `/chat/professional/${room.otherParty.id}` : `/chat/${room.otherParty?.id}`}
+            >
               <Card className="card-elevated border-0 hover:shadow-lg transition-shadow">
                 <CardContent className="flex items-center gap-4 p-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={room.otherPet?.avatar_url || undefined} />
-                    <AvatarFallback>{room.otherPet?.name[0]}</AvatarFallback>
+                    <AvatarImage src={room.otherParty?.avatar_url || undefined} />
+                    <AvatarFallback className={room.otherParty?.isProfessional ? "bg-blue-500 text-white" : ""}>
+                      {room.otherParty?.isProfessional ? <Stethoscope className="h-6 w-6" /> : room.otherParty?.name[0]}
+                    </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-semibold">{room.otherPet?.name}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{room.otherParty?.name}</p>
+                      {room.otherParty?.isProfessional && (
+                        <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold uppercase">
+                          Profissional
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      @{room.otherPet?.guardian_instagram_username}
+                      {room.otherParty?.subtitle}
                     </p>
                   </div>
                 </CardContent>

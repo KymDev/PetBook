@@ -298,3 +298,47 @@ button:active, .btn:active {
 .dark .notification-dot {
   border-color: hsl(0, 0%, 12%);
 }
+
+/* Estilos Adicionais para Stories e Mobile */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.story-ring {
+  padding: 2px;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border-radius: 50%;
+}
+
+.story-ring-viewed {
+  padding: 2px;
+  background: #e2e8f0;
+  border-radius: 50%;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+  main {
+    padding-bottom: 4rem;
+  }
+  
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

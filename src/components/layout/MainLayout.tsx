@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PetBookLogo } from "@/components/PetBookLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePet } from "@/contexts/PetContext";
+import { usePet, Pet } from "@/contexts/PetContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,59 +14,71 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   Home,
   Search,
-  PlusCircle,
+  PlusSquare,
   MessageCircle,
-  Bell,
   Settings,
   LogOut,
   Shield,
-  Menu,
-  X,
-  PawPrint,
-  Sparkles,
   Briefcase,
   User as UserIcon,
   Stethoscope,
   Users,
-  CheckCircle,
+  PawPrint,
+  PlusCircle,
+  Trash2,
+  UserCircle,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
-// Itens principais do feed - sempre visíveis
-const primaryNavItems = [
-  { href: "/feed", icon: Home, label: "Feed" },
-  { href: "/explore", icon: Search, label: "Explorar" },
-  { href: "/chat", icon: MessageCircle, label: "Chat" },
-  { href: "/services", icon: Stethoscope, label: "Serviços Pet" },
-];
-
-// Itens secundários - no menu dropdown
-const secondaryNavItems = [
-  { href: "/communities", icon: Users, label: "Comunidades" },
-];
-
 export const MainLayout = ({ children }: MainLayoutProps) => {
-  const { user, signOut, isAdmin } = useAuth();
-  const { currentPet, myPets } = usePet();
-  const { profile } = useUserProfile();
+  const { user, signOut, isAdmin, deleteAccount } = useAuth();
+  const { currentPet, myPets, selectPet, deletePet } = usePet();
+  const { profile, setAccountType } = useUserProfile();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { toast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Estados para modais de exclusão
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+  const [isDeletePetOpen, setIsDeletePetOpen] = useState(false);
+  const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (currentPet) {
+    const isProfessional = profile?.account_type === 'professional';
+    
+    if (currentPet || (isProfessional && user)) {
       fetchUnreadNotifications();
       
-      // Subscribe to notifications changes
+      const filter = isProfessional && user 
+        ? `related_user_id=eq.${user.id}` 
+        : currentPet 
+          ? `pet_id=eq.${currentPet.id}` 
+          : '';
+
+      if (!filter) return;
+
       const channel = supabase
         .channel('notifications-changes')
         .on(
@@ -75,7 +87,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
             event: '*',
             schema: 'public',
             table: 'notifications',
-            filter: `pet_id=eq.${currentPet.id}`
+            filter: filter
           },
           () => {
             fetchUnreadNotifications();
@@ -87,17 +99,32 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         supabase.removeChannel(channel);
       };
     }
-  }, [currentPet]);
+  }, [currentPet, profile, user]);
 
   const fetchUnreadNotifications = async () => {
-    if (!currentPet) return;
+    const isProfessional = profile?.account_type === 'professional';
     
-    const { count } = await supabase
+    let query = supabase
       .from("notifications")
       .select("*", { count: 'exact', head: true })
-      .eq("pet_id", currentPet.id)
       .eq("is_read", false);
 
+    if (isProfessional && user) {
+      query = query.eq("related_user_id", user.id);
+    } else if (user) {
+      const { data: userPets } = await supabase.from("pets").select("id").eq("user_id", user.id);
+      const petIds = (userPets as any[])?.map(p => p.id) || [];
+      if (petIds.length > 0) {
+        query = query.in("pet_id", petIds);
+      } else {
+        setUnreadCount(0);
+        return;
+      }
+    } else {
+      return;
+    }
+    
+    const { count } = await query;
     setUnreadCount(count || 0);
   };
 
@@ -109,319 +136,300 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const isProfessional = profile?.account_type === 'professional';
 
   const handleSwitchAccount = async (type: 'user' | 'professional') => {
-    if (type === 'professional') {
-      navigate('/professional-profile');
+    try {
+      if (setAccountType) {
+        await setAccountType(type);
+      }
+      if (type === 'professional') {
+        navigate('/professional-dashboard');
+      } else {
+        navigate('/feed');
+      }
+    } catch (error) {
+      console.error("Erro ao trocar tipo de conta:", error);
     }
   };
 
-  const formatNotificationCount = (count: number) => {
-    if (count === 0) return null;
-    if (count > 9) return "+9";
-    return count.toString();
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await deleteAccount();
+      if (error) throw error;
+      toast({ title: "Conta excluída", description: "Sua conta foi removida com sucesso." });
+      navigate("/auth");
+    } catch (error: any) {
+      toast({ title: "Erro ao excluir conta", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteAccountOpen(false);
+    }
   };
 
+  const handleDeletePet = async () => {
+    if (!petToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deletePet(petToDelete.id);
+      toast({ title: "Pet excluído", description: `${petToDelete.name} foi removido com sucesso.` });
+    } catch (error: any) {
+      toast({ title: "Erro ao excluir pet", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setIsDeletePetOpen(false);
+      setPetToDelete(null);
+    }
+  };
+
+  const navItems = [
+    { href: "/feed", icon: Home, label: "Feed" },
+    { href: "/explore", icon: Search, label: "Explorar" },
+    { href: "/create-post", icon: PlusSquare, label: "Postar", hideOnDesktop: true },
+    { href: "/services", icon: Stethoscope, label: "Serviços" },
+    { href: "/chat", icon: MessageCircle, label: "Chat" },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Header - Mais limpo e organizado */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-border bg-card/95 backdrop-blur-lg">
-        <div className="container flex h-full items-center justify-between px-4">
-          {/* Logo */}
+    <div className="min-h-screen bg-background pb-16 md:pb-0">
+      {/* Top Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-lg">
+        <div className="container flex h-full items-center justify-between px-4 max-w-6xl mx-auto">
           <Link to="/feed" className="flex-shrink-0">
             <PetBookLogo size="sm" />
           </Link>
 
-          {/* Desktop Nav - Itens principais incluindo Serviços Pet */}
-          <nav className="hidden md:flex items-center gap-1">
-            {primaryNavItems.map((item) => {
+          <nav className="hidden md:flex items-center gap-4">
+            {navItems.filter(i => !i.hideOnDesktop).map((item) => {
               const isActive = location.pathname === item.href;
               return (
-                <Link key={item.href} to={item.href}>
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
-                    className={cn(
-                      "gap-2",
-                      isActive && "gradient-bg"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="hidden lg:inline">{item.label}</span>
-                  </Button>
+                <Link key={item.href} to={item.href} className={cn(
+                  "flex items-center gap-2 px-2 py-1 rounded-md transition-colors hover:bg-accent",
+                  isActive ? "text-primary font-bold" : "text-muted-foreground"
+                )}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="hidden lg:inline text-sm">{item.label}</span>
                 </Link>
               );
             })}
-            
-            {/* Notificações - Apenas sininho com contador */}
-            <Link to="/notifications">
-              <Button
-                variant={location.pathname === "/notifications" ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "relative",
-                  location.pathname === "/notifications" && "gradient-bg"
-                )}
-              >
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
-                    {formatNotificationCount(unreadCount)}
-                  </span>
-                )}
-              </Button>
-            </Link>
           </nav>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2">
-            {/* Create Story/Post - Botão de ação rápida */}
+          <div className="flex items-center gap-1 md:gap-3">
+            {/* Notificações com ícone de Patinha */}
+            <Link to="/notifications" className="relative p-2 text-muted-foreground hover:text-primary transition-colors">
+              <PawPrint className={cn("h-6 w-6", location.pathname === "/notifications" && "text-primary")} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Menu de Configurações (Engrenagem) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden sm:flex">
-                  <PlusCircle className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to="/create-post" className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4" />
-                    Criar Post
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/create-story" className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Criar Story
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Pet Selector */}
-            {currentPet && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 hidden sm:flex">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={currentPet.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {currentPet.name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden md:inline max-w-[100px] truncate">
-                      {currentPet.name}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Meus Pets</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {myPets.map((pet) => (
-                    <DropdownMenuItem key={pet.id} asChild>
-                      <Link to={`/pet/${pet.id}`} className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={pet.avatar_url || undefined} />
-                          <AvatarFallback>{pet.name[0]}</AvatarFallback>
-                        </Avatar>
-                        {pet.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/create-pet" className="flex items-center gap-2">
-                      <PawPrint className="h-4 w-4" />
-                      Cadastrar novo pet
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* Settings Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {/* Alternar Tipo de Conta */}
-                <DropdownMenuLabel>Tipo de Conta</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => handleSwitchAccount('user')}
-                  className={!isProfessional ? 'bg-primary/10' : ''}
-                >
+                <DropdownMenuLabel>Configurações</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleSwitchAccount('user')} className={!isProfessional ? 'bg-primary/10' : ''}>
                   <UserIcon className="h-4 w-4 mr-2" />
-                  <span>Usuário (Guardião)</span>
+                  <span>Modo Guardião</span>
                   {!isProfessional && <span className="ml-auto text-primary">✓</span>}
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleSwitchAccount('professional')}
-                  className={isProfessional ? 'bg-primary/10' : ''}
-                >
+                <DropdownMenuItem onClick={() => handleSwitchAccount('professional')} className={isProfessional ? 'bg-primary/10' : ''}>
                   <Briefcase className="h-4 w-4 mr-2" />
-                  <span>Profissional</span>
+                  <span>Modo Profissional</span>
                   {isProfessional && <span className="ml-auto text-primary">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 
-                {/* Itens secundários de navegação */}
-                {secondaryNavItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link to={item.href} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
+                {/* Opções de Gerenciamento de Pets (Apenas Modo Guardião) */}
+                {!isProfessional && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/create-pet" className="flex items-center gap-2">
+                        <PlusCircle className="h-4 w-4" />
+                        Adicionar Novo Pet
+                      </Link>
+                    </DropdownMenuItem>
+                    {myPets.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="w-full">
+                          <div className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm cursor-default">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <span className="text-destructive">Excluir um Pet</span>
+                            <ChevronRight className="h-4 w-4 ml-auto" />
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="left" className="w-48">
+                          {myPets.map(pet => (
+                            <DropdownMenuItem key={pet.id} onClick={() => { setPetToDelete(pet); setIsDeletePetOpen(true); }} className="text-destructive">
+                              {pet.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+
+                <DropdownMenuItem asChild>
+                  <Link to="/communities" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Comunidades
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Painel Admin
                     </Link>
                   </DropdownMenuItem>
-                ))}
-                
+                )}
                 <DropdownMenuSeparator />
-                
-                {/* Perfil Profissional */}
-                {isProfessional && (
-                  <>
-                    <DropdownMenuLabel>Área Profissional</DropdownMenuLabel>
-                    <DropdownMenuItem asChild>
-                      <Link to="/professional-dashboard" className="flex items-center gap-2">
-                        <Stethoscope className="h-4 w-4" />
-                        Painel de Atendimento
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/professional-profile" className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4" />
-                        Editar Perfil
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                
-                {/* Admin */}
-                {isAdmin && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Painel Admin
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <DropdownMenuItem onClick={() => setIsDeleteAccountOpen(true)} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Conta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X /> : <Menu />}
-            </Button>
+            {/* Menu do Pet / Perfil */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="h-8 w-8 border border-border hover:ring-2 ring-primary/20 transition-all cursor-pointer">
+                  {isProfessional ? (
+                    <>
+                      <AvatarImage src={profile?.professional_avatar_url || undefined} />
+                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
+                        {profile?.full_name?.[0] || <Briefcase className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </>
+                  ) : currentPet ? (
+                    <>
+                      <AvatarImage src={currentPet.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {currentPet.name[0]}
+                      </AvatarFallback>
+                    </>
+                  ) : (
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                      <UserIcon className="h-4 w-4" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>
+                  {isProfessional ? profile?.full_name : (currentPet?.name || "Seu Perfil")}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to={isProfessional ? "/professional-profile" : (currentPet ? `/pet/${currentPet.id}` : "/create-pet")} className="flex items-center gap-2">
+                    <UserCircle className="h-4 w-4" />
+                    Ver Perfil
+                  </Link>
+                </DropdownMenuItem>
+                
+                {/* Lista de outros pets para trocar */}
+                {!isProfessional && myPets.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">Seus outros pets</DropdownMenuLabel>
+                    {myPets.filter(p => p.id !== currentPet?.id).map(pet => (
+                      <DropdownMenuItem key={pet.id} onClick={() => selectPet(pet)} className="flex items-center gap-3">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={pet.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px]">{pet.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <span>{pet.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
 
-      {/* Mobile Nav */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 pt-16 md:hidden">
-          <div 
-            className="absolute inset-0 bg-background/95 backdrop-blur-sm" 
-            onClick={() => setMobileMenuOpen(false)} 
-          />
-          <nav className="relative bg-card border-b border-border p-4 space-y-2 animate-slide-up">
-            {/* Primary Items */}
-            {primaryNavItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    className={cn("w-full justify-start gap-3", isActive && "gradient-bg")}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
-            
-            {/* Notificações no mobile */}
-            <Link
-              to="/notifications"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Button
-                variant={location.pathname === "/notifications" ? "default" : "ghost"}
-                className={cn("w-full justify-start gap-3 relative", location.pathname === "/notifications" && "gradient-bg")}
-              >
-                <Bell className="h-5 w-5" />
-                Notificações
-                {unreadCount > 0 && (
-                  <span className="ml-auto h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-semibold">
-                    {formatNotificationCount(unreadCount)}
-                  </span>
-                )}
-              </Button>
-            </Link>
-            
-            <div className="h-px bg-border my-2" />
-            
-            {/* Secondary Items */}
-            {secondaryNavItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    className={cn("w-full justify-start gap-3", isActive && "gradient-bg")}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
-            
-            <div className="h-px bg-border my-2" />
-            
-            {/* Create Actions */}
-            <Link to="/create-post" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <PlusCircle className="h-5 w-5" />
-                Criar Post
-              </Button>
-            </Link>
-            <Link to="/create-story" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Sparkles className="h-5 w-5" />
-                Criar Story
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      )}
+      {/* Modais de Exclusão */}
+      <AlertDialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Conta Permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta, todos os seus pets, posts e dados profissionais.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-500 hover:bg-red-600" disabled={isDeleting}>
+              {isDeleting ? "Excluindo..." : "Sim, Excluir Conta"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDeletePetOpen} onOpenChange={setIsDeletePetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Pet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o perfil de <strong>{petToDelete?.name}</strong>? Todos os posts e dados deste pet serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePet} className="bg-red-500 hover:bg-red-600" disabled={isDeleting}>
+              {isDeleting ? "Excluindo..." : "Sim, Excluir Pet"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Content */}
-      <main className="pt-16 min-h-screen">
+      <main className="pt-14 min-h-screen max-w-6xl mx-auto">
         {children}
       </main>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-background border-t border-border flex items-center justify-around z-50 px-2">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link key={item.href} to={item.href} className="flex flex-col items-center justify-center w-full h-full transition-colors">
+              <item.icon className={cn(
+                "h-6 w-6 transition-all",
+                isActive ? "text-primary scale-110" : "text-muted-foreground"
+              )} />
+            </Link>
+          );
+        })}
+        <Link to={isProfessional ? "/professional-profile" : (currentPet ? `/pet/${currentPet.id}` : "/create-pet")} className="flex items-center justify-center w-full h-full">
+          <Avatar className={cn(
+            "h-7 w-7 border transition-all",
+            location.pathname.includes("/pet/") || location.pathname === "/professional-profile" ? "border-primary ring-1 ring-primary" : "border-border"
+          )}>
+            {isProfessional ? (
+              <AvatarImage src={profile?.professional_avatar_url || undefined} />
+            ) : (
+              <AvatarImage src={currentPet?.avatar_url || undefined} />
+            )}
+            <AvatarFallback className="text-[10px]">
+              {isProfessional ? profile?.full_name?.[0] : currentPet?.name?.[0] || "?"}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
+      </nav>
     </div>
   );
 };

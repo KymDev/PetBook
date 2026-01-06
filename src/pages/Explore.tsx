@@ -43,8 +43,7 @@ const Explore = () => {
       const { data: followingData } = await supabase
         .from("followers")
         .select("target_pet_id")
-        .eq("follower_id", currentPet.id)
-        .eq("is_user_follower", false);
+        .eq("follower_id", currentPet.id);
 
       const followingIds = new Set(followingData?.map(f => f.target_pet_id) || []);
 

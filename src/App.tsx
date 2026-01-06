@@ -81,30 +81,28 @@ const RootRedirect = () => {
   // O UserProfileContext garante que um perfil seja criado, então esperamos o objeto 'profile' existir.
   if (!profile) return <LoadingPage />;
 
-  // Se o tipo de conta não foi definido, ir para signup-choice
+  // Se o tipo de conta não foi definido, ir para signup-choice.
   if (!profile.account_type) {
     return <Navigate to="/signup-choice" replace />;
   }
 
   // Lógica de Redirecionamento Pós-Login
   if (profile.account_type === 'professional') {
-    // Se for profissional, verifica se o perfil está completo (ex: tem bio)
-    // Assumindo que 'professional_bio' é um campo obrigatório para um perfil completo
-    if (!profile.professional_bio) {
-      // Redireciona para a tela de preenchimento do perfil profissional
-      return <Navigate to="/professional-signup" replace />;
+    // Se for profissional e o perfil estiver completo, vai para o dashboard
+    if (profile.professional_bio) {
+      return <Navigate to="/professional-dashboard" replace />;
     }
-    // Se for profissional e o perfil estiver completo, vai para o feed
-    return <Navigate to="/feed" replace />;
+    // Se não estiver completo, vai para o signup profissional
+    return <Navigate to="/professional-signup" replace />;
   }
 
   if (profile.account_type === 'user') {
-    // Se é guardião e não tem pet, vai para criar pet
-    if (myPets.length === 0) {
-      return <Navigate to="/create-pet" replace />;
-    }
     // Se é guardião e tem pet, vai para o feed
-    return <Navigate to="/feed" replace />;
+    if (myPets.length > 0) {
+      return <Navigate to="/feed" replace />;
+    }
+    // Se é guardião e não tem pet, vai para criar pet
+    return <Navigate to="/create-pet" replace />;
   }
 
   // Fallback (não deve acontecer se o account_type estiver definido)
@@ -135,13 +133,20 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   if (!user) return <Navigate to="/auth" replace />;
 
   // Se não escolheu tipo de conta, ir para signup-choice
-  if (!profile || !profile.account_type) return <Navigate to="/signup-choice" replace />;
+  if (!profile || !profile.account_type) {
+    // Se o usuário está logado, mas o perfil ainda não carregou ou o account_type não está definido,
+    // o RootRedirect deve ter tratado o caso inicial. Se chegamos aqui, algo está errado.
+    // Vamos redirecionar para a escolha de conta, onde o usuário pode forçar a definição.
+    return <Navigate to="/signup-choice" replace />;
+  }
 
   // Se é profissional, pode acessar qualquer rota
   if (profile.account_type === 'professional') return children;
 
-  // Se é guardião e não tem pet, ir para create-pet
-  if (myPets.length === 0) return <Navigate to="/create-pet" replace />;
+  // Se é guardião e não tem pet, e não está na página de criar pet, ir para create-pet
+  if (myPets.length === 0 && window.location.pathname !== '/create-pet') {
+    return <Navigate to="/create-pet" replace />;
+  }
 
   return children;
 };
@@ -266,6 +271,14 @@ const AppRoutes = () => (
     />
     <Route
       path="/chat/:petId"
+      element={
+        <ProtectedRoute>
+          <ChatRoom />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/chat/professional/:userId"
       element={
         <ProtectedRoute>
           <ChatRoom />

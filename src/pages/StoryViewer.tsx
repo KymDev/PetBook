@@ -2,17 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet } from "@/contexts/PetContext";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Trash2, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface Story {
-  view_count?: number;
   id: string;
   pet_id: string;
   media_url: string;
@@ -32,103 +31,126 @@ export default function StoryViewer() {
   const navigate = useNavigate();
   const { currentPet } = usePet();
   const [story, setStory] = useState<Story | null>(null);
-  const [professionalViewCount, setProfessionalViewCount] = useState<number>(0);
-  const [viewCount, setViewCount] = useState<number>(0);
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [showViewers, setShowViewers] = useState(false);
+  const [viewers, setViewers] = useState<any[]>([]);
 
   useEffect(() => {
-    if (id) fetchStory();
+    if (id) {
+      fetchStory();
+      fetchViewers();
+    }
   }, [id]);
 
-  // Progress bar animation
   useEffect(() => {
-    if (!loading && story) {
+    if (!loading && story && !showViewers) {
       const interval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 100) {
             handleNext();
             return 0;
           }
-          return prev + 2;
+          return prev + 1;
         });
       }, 50);
       return () => clearInterval(interval);
     }
-  }, [loading, story]);
+  }, [loading, story, showViewers, currentIndex, allStories.length]);
+
+  const handleDeleteStory = async () => {
+    if (!window.confirm("Tem certeza que deseja excluir este Story? Esta ação é irreversível.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("stories")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      navigate("/feed");
+    } catch (error) {
+      console.error("Erro ao excluir story:", error);
+    }
+  };
+
+  const fetchViewers = async () => {
+    const { data, error } = await supabase
+      .from("story_views" as any)
+      .select(`
+        viewer_pet_id,
+        viewer_pet:pets(id, name, avatar_url)
+      `)
+      .eq("story_id", id);
+
+    if (error) {
+      console.error("Erro ao buscar visualizadores:", error);
+      return;
+    }
+
+    const formattedViewers = (data as any[]).map(v => {
+      if (v.viewer_pet) {
+        return {
+          id: v.viewer_pet.id,
+          name: v.viewer_pet.name,
+          avatar_url: v.viewer_pet.avatar_url,
+          type: 'pet',
+        };
+      }
+      return null;
+    }).filter(v => v !== null);
+
+    setViewers(formattedViewers);
+  };
 
   const fetchStory = async () => {
     setLoading(true);
-
-    // Get the current story
-    const { data: storyData } = await supabase
+    const { data: storyData, error } = await supabase
       .from("stories")
-      .select("*, pet:pet_id(id, name, avatar_url, guardian_instagram_username)")
+      .select("*, pet:pets(id, name, avatar_url, guardian_instagram_username)")
       .eq("id", id)
       .single();
 
-    // Fetch view count
-    const { count } = await supabase
-      .from("story_views")
-      .select("*", { count: "exact", head: true })
-      .eq("story_id", id);
-
-    if (count !== null) {
-      setViewCount(count);
-    }
-
-    // Fetch professional view count
-    const { count: profCount } = await supabase
-      .from("story_views")
-      .select("*", { count: "exact", head: true })
-      .eq("story_id", id)
-      .eq("is_professional", true);
-
-    if (profCount !== null) {
-      setProfessionalViewCount(profCount);
-    }
-
-    if (!storyData) {
+    if (error || !storyData) {
+      console.error("Erro ao buscar story:", error);
       navigate("/feed");
       return;
     }
 
-    setStory(storyData);
+    setStory(storyData as any);
 
-    // Get all stories from this pet (for navigation)
     const { data: petStories } = await supabase
       .from("stories")
-      .select("*, pet:pet_id(id, name, avatar_url, guardian_instagram_username)")
+      .select("*, pet:pets(id, name, avatar_url, guardian_instagram_username)")
       .eq("pet_id", storyData.pet_id)
       .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
 
     if (petStories) {
-      setAllStories(petStories);
+      setAllStories(petStories as any[]);
       const index = petStories.findIndex(s => s.id === id);
       setCurrentIndex(index >= 0 ? index : 0);
     }
 
-    // Record view
-    if (currentPet) {
-      await supabase.from("story_views").insert({
+    if (currentPet && currentPet.id !== storyData.pet_id) {
+      await supabase.from("story_views" as any).upsert({
         story_id: id,
         viewer_pet_id: currentPet.id,
-        // is_professional será preenchido pelo trigger no banco de dados
-      }).onConflict("story_id,viewer_pet_id").ignore();
+      }, { onConflict: 'story_id,viewer_pet_id' });
     }
 
     setLoading(false);
+    setProgress(0);
   };
 
   const handleNext = () => {
     if (currentIndex < allStories.length - 1) {
       const nextStory = allStories[currentIndex + 1];
       navigate(`/story/${nextStory.id}`);
-      setCurrentIndex(currentIndex + 1);
-      setProgress(0);
     } else {
       navigate("/feed");
     }
@@ -138,58 +160,37 @@ export default function StoryViewer() {
     if (currentIndex > 0) {
       const prevStory = allStories[currentIndex - 1];
       navigate(`/story/${prevStory.id}`);
-      setCurrentIndex(currentIndex - 1);
-      setProgress(0);
     }
   };
 
   if (loading) {
     return (
-      <MainLayout>
-        <div className="fixed inset-0 bg-black flex items-center justify-center">
-          <Skeleton className="w-full h-full" />
-        </div>
-      </MainLayout>
+      <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+        <Skeleton className="w-full h-full bg-gray-900" />
+      </div>
     );
   }
 
-  if (!story) {
-    return (
-      <MainLayout>
-        <div className="container max-w-xl py-6">
-          <Card className="card-elevated border-0">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Story não encontrado ou expirou</p>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    );
-  }
+  if (!story) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-      {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gray-700 z-10">
-        <div
-          className="h-full bg-white transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        />
+    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center overflow-hidden">
+      {/* Progress bars */}
+      <div className="absolute top-2 left-2 right-2 flex gap-1 z-20">
+        {allStories.map((s, i) => (
+          <div key={s.id} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-white transition-all duration-100 ease-linear"
+              style={{ 
+                width: i < currentIndex ? '100%' : i === currentIndex ? `${progress}%` : '0%' 
+              }}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Header */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20">
-        {/* Contador de Visualizações */}
-        {story.pet?.id === currentPet?.id && (
-          <div className="absolute bottom-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full z-30">
-            {viewCount} pessoas viram o story do seu pet
-            {professionalViewCount > 0 && (
-              <span className="ml-2 text-yellow-400">
-                ({professionalViewCount} profissional{professionalViewCount > 1 ? "is" : ""})
-              </span>
-            )}
-          </div>
-        )}
+      <div className="absolute top-6 left-4 right-4 flex items-center justify-between z-20">
         <Link to={`/pet/${story.pet?.id}`} className="flex items-center gap-2">
           <Avatar className="h-10 w-10 border-2 border-white">
             <AvatarImage src={story.pet?.avatar_url || undefined} />
@@ -197,69 +198,72 @@ export default function StoryViewer() {
               {story.pet?.name?.[0]}
             </AvatarFallback>
           </Avatar>
-          <div className="text-white">
+          <div className="text-white drop-shadow-md">
             <p className="font-semibold text-sm">{story.pet?.name}</p>
-            <p className="text-xs text-gray-300">
-              {formatDistanceToNow(new Date(story.created_at), {
-                addSuffix: true,
-                locale: ptBR,
-              })}
+            <p className="text-[10px] opacity-80">
+              {formatDistanceToNow(new Date(story.created_at), { addSuffix: true, locale: ptBR })}
             </p>
           </div>
         </Link>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white hover:bg-white/20"
-          onClick={() => navigate("/feed")}
-        >
-          <X className="h-6 w-6" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {story.pet_id === currentPet?.id && (
+            <>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setShowViewers(true)}>
+                <Eye className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-red-400 hover:bg-white/20" onClick={handleDeleteStory}>
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => navigate("/feed")}>
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
       </div>
 
       {/* Story Content */}
-      <div className="relative w-full max-w-md h-screen max-h-screen flex items-center justify-center">
-        <img
-          src={story.media_url}
-          alt="Story"
-          className="w-full h-full object-cover"
-        />
-
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className="absolute inset-0 flex">
+          <div className="w-1/3 h-full cursor-pointer z-10" onClick={handlePrev} />
+          <div className="w-1/3 h-full cursor-pointer z-10" onClick={() => {}} />
+          <div className="w-1/3 h-full cursor-pointer z-10" onClick={handleNext} />
+        </div>
+        <img src={story.media_url} alt="Story" className="max-w-full max-h-full object-contain" />
         {story.description && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-            <p className="text-white text-sm">{story.description}</p>
+          <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 text-center">
+            <p className="text-white text-sm font-medium drop-shadow-md">{story.description}</p>
           </div>
         )}
       </div>
 
-      {/* Navigation Buttons */}
-      {currentIndex > 0 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
-          onClick={handlePrev}
-        >
-          <ChevronLeft className="h-8 w-8" />
-        </Button>
-      )}
-
-      {currentIndex < allStories.length - 1 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
-          onClick={handleNext}
-        >
-          <ChevronRight className="h-8 w-8" />
-        </Button>
-      )}
-
-      {/* Story Navigation Counter */}
-      <div className="absolute bottom-4 right-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
-        {currentIndex + 1} / {allStories.length}
-      </div>
+      {/* Viewers Dialog */}
+      <Dialog open={showViewers} onOpenChange={setShowViewers}>
+        <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
+          <div className="p-2">
+            <h2 className="text-lg font-bold mb-4">Visualizações ({viewers.length})</h2>
+            <div className="space-y-4">
+              {viewers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">Nenhuma visualização ainda.</p>
+              ) : (
+                viewers.map(viewer => (
+                  <Link key={viewer.id} to={`/pet/${viewer.id}`} className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg transition-colors" onClick={() => setShowViewers(false)}>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={viewer.avatar_url || undefined} />
+                      <AvatarFallback>{viewer.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold text-sm">{viewer.name}</p>
+                      <p className="text-xs text-muted-foreground">Pet</p>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

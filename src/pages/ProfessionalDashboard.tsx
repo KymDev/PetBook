@@ -1,32 +1,33 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
-  AlertCircle, 
-  Calendar, 
-  MessageSquare, 
   Users, 
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  XCircle,
+  Calendar, 
+  BarChart3, 
+  MessageSquare, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
   Phone,
-  Mail,
-  MapPin,
-  Star,
-  BarChart3,
-  DollarSign,
+  Stethoscope,
+  ChevronRight,
+  Activity,
+  AlertCircle,
+  History
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Link, Navigate } from "react-router-dom";
+import { toast } from "sonner";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 interface ServiceRequest {
   id: string;
@@ -36,303 +37,306 @@ interface ServiceRequest {
   guardian_name: string;
   service_type: string;
   message: string;
-  status: "pending" | "accepted" | "rejected" | "completed" | "cancelled"; // Adicionado 'cancelled'
+  status: string;
   created_at: string;
   phone?: string;
 }
 
+interface ClientPet {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  breed: string;
+  species: string;
+  guardian_name: string;
+  access_status: 'pending' | 'granted' | 'revoked';
+  last_record?: {
+    type: string;
+    date: string;
+  };
+}
+
 const ProfessionalDashboard = () => {
-  const { user } = useAuth();
-  const { profile } = useUserProfile();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useUserProfile();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
-  const [stats, setStats] = useState({
-    totalRequests: 0,
-    pendingRequests: 0,
-    completedServices: 0,
-    rating: 4.8,
-  });
+  const [clients, setClients] = useState<ClientPet[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (profile?.account_type === 'professional') {
+    if (user && profile?.account_type === 'professional') {
       fetchDashboardData();
     }
-  }, [profile]);
+  }, [user, profile]);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    // 1. Buscar Solicitações de Serviço
-    const { data: requestsData, error: requestsError } = await supabase
-      .from('service_requests')
-      .select(`
-        id,
-        service_type,
-        message,
-        status,
-        created_at,
-        pet:pet_id(id, name, avatar_url, guardian_name:guardian_name, guardian_phone:guardian_phone)
-      `)
-      .eq('professional_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (requestsError) {
-      console.error("Erro ao buscar solicitações:", requestsError);
-      setLoading(false);
-      return;
-    }
-
-    // Mapear e tipar os dados (ajustando para a nova estrutura de select)
-    const mappedRequests: ServiceRequest[] = requestsData.map((req: any) => ({
-      id: req.id,
-      pet_id: req.pet.id,
-      pet_name: req.pet.name,
-      pet_avatar: req.pet.avatar_url,
-      guardian_name: req.pet.guardian_name || 'Guardião Desconhecido', // Assumindo que pets tem guardian_name
-      service_type: req.service_type,
-      message: req.message,
-      status: req.status,
-      created_at: req.created_at,
-      phone: req.pet.guardian_phone, // Assumindo que pets tem guardian_phone
-    }));
-
-    // 2. Calcular Estatísticas
-    const totalRequests = mappedRequests.length;
-    const pendingRequests = mappedRequests.filter(r => r.status === 'pending').length;
-    const completedServices = mappedRequests.filter(r => r.status === 'completed').length;
-
-    // 3. Buscar Avaliações (para o rating)
-    const { data: reviewsData } = await supabase
-      .from('service_reviews')
-      .select('rating')
-      .eq('professional_id', user.id);
-
-    let averageRating = 0;
-    if (reviewsData && reviewsData.length > 0) {
-      const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
-      averageRating = parseFloat((totalRating / reviewsData.length).toFixed(1));
-    }
-
-    setRequests(mappedRequests);
-    setStats({
-      totalRequests,
-      pendingRequests,
-      completedServices,
-      rating: averageRating || 5.0, // Default 5.0 se não houver avaliações
-    });
-    
-    setLoading(false);
-  };
-
-  if (!profile || profile.account_type !== 'professional') {
-    return (
-      <MainLayout>
-        <div className="container max-w-2xl py-8">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold mb-2">Acesso Restrito</h2>
-              <p className="text-muted-foreground mb-4">
-                Esta página é apenas para contas profissionais.
-              </p>
-              <Button onClick={() => navigate('/feed')}>
-                Voltar ao Feed
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    );
+  if (authLoading || profileLoading) {
+    return <LoadingScreen message="Carregando painel..." />;
   }
 
-  const getStatusBadge = (status: ServiceRequest['status']) => {
-    const variants = {
-      pending: { label: "Pendente", variant: "secondary" as const, icon: Clock },
-      accepted: { label: "Aceito", variant: "default" as const, icon: CheckCircle },
-      rejected: { label: "Recusado", variant: "destructive" as const, icon: XCircle },
-      completed: { label: "Concluído", variant: "outline" as const, icon: CheckCircle },
-      cancelled: { label: "Cancelado", variant: "destructive" as const, icon: XCircle }, // Adicionado 'cancelled'
-    };
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
-    const config = variants[status];
-    const Icon = config.icon;
+  if (profile?.account_type !== 'professional') {
+    return <Navigate to="/feed" replace />;
+  }
 
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Icon className="w-3 h-3" />
-        {config.label}
-      </Badge>
-    );
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Buscar solicitações de serviço
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('service_requests')
+        .select(`
+          *,
+          pet:pet_id(name, avatar_url, guardian_name)
+        `)
+        .eq('professional_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (requestsError) throw requestsError;
+
+      const formattedRequests = requestsData.map((req: any) => ({
+        id: req.id,
+        pet_id: req.pet_id,
+        pet_name: req.pet.name,
+        pet_avatar: req.pet.avatar_url,
+        guardian_name: req.pet.guardian_name,
+        service_type: req.service_type,
+        message: req.message,
+        status: req.status,
+        created_at: req.created_at,
+      }));
+
+      setRequests(formattedRequests);
+
+      // 2. Buscar clientes (pets com acesso concedido ou solicitações aceitas)
+      const { data: accessData, error: accessError } = await supabase
+        .from('health_access_status')
+        .select(`
+          status,
+          pet:pet_id(id, name, avatar_url, breed, species, guardian_name)
+        `)
+        .eq('professional_user_id', user?.id);
+
+      if (accessError) throw accessError;
+
+      const formattedClients = accessData.map((acc: any) => ({
+        id: acc.pet.id,
+        name: acc.pet.name,
+        avatar_url: acc.pet.avatar_url,
+        breed: acc.pet.breed,
+        species: acc.pet.species,
+        guardian_name: acc.pet.guardian_name,
+        access_status: acc.status,
+      }));
+
+      setClients(formattedClients);
+
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      toast.error("Erro ao carregar dados do dashboard");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pendente</Badge>;
+      case 'accepted':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Aceito</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Recusado</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   return (
     <MainLayout>
-      <div className="container max-w-6xl py-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="container max-w-6xl py-8 px-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold font-heading">Painel de Atendimento</h1>
-            <p className="text-muted-foreground">Gerencie suas solicitações e agendamentos</p>
+            <h1 className="text-3xl font-bold tracking-tight">Painel do Profissional</h1>
+            <p className="text-muted-foreground">
+              Bem-vindo de volta, {profile?.full_name}. Gerencie seus atendimentos e clientes.
+            </p>
           </div>
-          <Button onClick={() => navigate('/professional-profile')}>
-            Editar Perfil
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalRequests}</div>
-              <p className="text-xs text-muted-foreground">Este mês</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">Aguardando resposta</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.completedServices}</div>
-              <p className="text-xs text-muted-foreground">Serviços finalizados</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avaliação</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold flex items-center gap-1">
-                {stats.rating}
-                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-              </div>
-              <p className="text-xs text-muted-foreground">Média de avaliações</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="requests" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="requests" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Solicitações
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="gap-2">
-              <Calendar className="h-4 w-4" />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Calendar className="h-4 w-4 mr-2" />
               Agenda
+            </Button>
+            <Link to="/professional/profile">
+              <Button size="sm">Ver Perfil Público</Button>
+            </Link>
+          </div>
+        </div>
+
+        <Tabs defaultValue="requests" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="requests" className="relative">
+              Solicitações
+              {requests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {requests.filter(r => r.status === 'pending').length}
+                </span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="clients" className="gap-2">
-              <Users className="h-4 w-4" />
-              Clientes
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Estatísticas
-            </TabsTrigger>
+            <TabsTrigger value="clients">Clientes</TabsTrigger>
+            <TabsTrigger value="schedule">Agenda</TabsTrigger>
+            <TabsTrigger value="analytics">Estatísticas</TabsTrigger>
           </TabsList>
 
           {/* Solicitações */}
           <TabsContent value="requests" className="space-y-4">
             {loading ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">Carregando...</p>
-                </CardContent>
-              </Card>
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
             ) : requests.length === 0 ? (
               <Card>
-                <CardContent className="pt-6 text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação</h3>
-                  <p className="text-muted-foreground">
-                    Você ainda não recebeu solicitações de serviço.
-                  </p>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="text-lg font-medium">Nenhuma solicitação</h3>
+                  <p className="text-muted-foreground">Você ainda não recebeu solicitações de serviço.</p>
                 </CardContent>
               </Card>
             ) : (
-              requests.map((request) => (
-                <Card key={request.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={request.pet_avatar || undefined} />
-                          <AvatarFallback>{request.pet_name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <CardTitle className="text-lg">{request.pet_name}</CardTitle>
-                          <CardDescription>Guardião: {request.guardian_name}</CardDescription>
+              <div className="grid gap-4 md:grid-cols-2">
+                {requests.map((request) => (
+                  <Card key={request.id} className="overflow-hidden border-l-4 border-l-primary">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={request.pet_avatar || undefined} />
+                            <AvatarFallback>{request.pet_name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle className="text-lg">{request.pet_name}</CardTitle>
+                            <CardDescription>Guardião: {request.guardian_name}</CardDescription>
+                          </div>
+                        </div>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Serviço solicitado:</p>
+                        <Badge variant="secondary">{request.service_type}</Badge>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Mensagem:</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{request.message}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(request.created_at), {
+                            addSuffix: true,
+                            locale: ptBR,
+                          })}
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8">
+                          Detalhes
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Clientes - NOVA IMPLEMENTAÇÃO COM FOCO EM SAÚDE */}
+          <TabsContent value="clients" className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : clients.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                  <h3 className="text-lg font-medium">Nenhum cliente</h3>
+                  <p className="text-muted-foreground">Sua lista de clientes aparecerá aqui após aceitar solicitações.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {clients.map((client) => (
+                  <Card key={client.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-0">
+                      <div className="flex flex-col md:flex-row">
+                        {/* Info Básica */}
+                        <div className="p-6 flex items-center gap-4 md:w-1/3 border-b md:border-b-0 md:border-r">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src={client.avatar_url || undefined} />
+                            <AvatarFallback>{client.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-bold text-lg">{client.name}</h3>
+                            <p className="text-sm text-muted-foreground">{client.species} • {client.breed}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Tutor: {client.guardian_name}</p>
+                          </div>
+                        </div>
+
+                        {/* Resumo de Saúde Contextual (Simulado para a demo) */}
+                        <div className="p-6 flex-1 bg-secondary/5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Activity className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold">Resumo Contextual (Últimos 30 dias)</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-start gap-2">
+                              <div className="mt-1 p-1 bg-green-100 rounded">
+                                <CheckCircle className="h-3 w-3 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium">Energia/Apetite</p>
+                                <p className="text-[10px] text-muted-foreground">Estável e dentro do normal</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <div className="mt-1 p-1 bg-blue-100 rounded">
+                                <History className="h-3 w-3 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium">Último Evento</p>
+                                <p className="text-[10px] text-muted-foreground">Vacina V10 aplicada há 12 dias</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ações */}
+                        <div className="p-6 flex items-center justify-center md:w-1/4 gap-2">
+                          {client.access_status === 'granted' ? (
+                            <Link to={`/pet/${client.id}/health`} className="w-full">
+                              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                                <Stethoscope className="h-4 w-4 mr-2" />
+                                Ficha de Saúde
+                              </Button>
+                            </Link>
+                          ) : (
+                            <Button variant="outline" className="w-full" disabled>
+                              <AlertCircle className="h-4 w-4 mr-2" />
+                              Acesso Pendente
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm font-semibold mb-1">Serviço solicitado:</p>
-                      <Badge variant="outline">{request.service_type}</Badge>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm font-semibold mb-1">Mensagem:</p>
-                      <p className="text-sm text-muted-foreground">{request.message}</p>
-                    </div>
-
-                    {request.phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{request.phone}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(request.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
-                    </div>
-
-                    {request.status === 'pending' && (
-                      <div className="flex gap-2 pt-2">
-                        <Button className="flex-1" size="sm">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Aceitar
-                        </Button>
-                        <Button variant="outline" className="flex-1" size="sm">
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Recusar
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </TabsContent>
 
@@ -345,24 +349,8 @@ const ProfessionalDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4" />
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-20" />
                   <p>Funcionalidade de agenda em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Clientes */}
-          <TabsContent value="clients">
-            <Card>
-              <CardHeader>
-                <CardTitle>Meus Clientes</CardTitle>
-                <CardDescription>Pets e guardiões que você atende</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4" />
-                  <p>Lista de clientes em desenvolvimento</p>
                 </div>
               </CardContent>
             </Card>
@@ -377,7 +365,7 @@ const ProfessionalDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-20" />
                   <p>Estatísticas detalhadas em desenvolvimento</p>
                 </div>
               </CardContent>

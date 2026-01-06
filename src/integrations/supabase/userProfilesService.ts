@@ -2,8 +2,24 @@ import { supabase } from './client';
 import { Database } from './types';
 
 // Tipos auxiliares para facilitar o uso
-export type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+export type UserProfile = Database["public"]["Tables"]["user_profiles"]["Row"] & {
+  professional_avatar_url?: string | null;
+};
 export type AccountType = Database['public']['Enums']['account_type'];
+
+/**
+ * Deleta o perfil de um usuário.
+ * @param userId O ID do usuário.
+ * @returns Um erro, se houver.
+ */
+export async function deleteUserProfile(userId: string): Promise<{ error: any }> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .delete()
+    .eq('id', userId);
+
+  return { error };
+}
 
 /**
  * Obtém todos os perfis de usuário que são profissionais.

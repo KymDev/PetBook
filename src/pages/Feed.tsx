@@ -31,113 +31,123 @@ const Feed = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // A lógica de redirecionamento para /auth e /create-pet é tratada pelo ProtectedRoute.
-  // Este useEffect é redundante e pode causar loops ou erros de renderização.
-  // Removendo para simplificar o fluxo.
-  useEffect(() => {
-    if (authLoading || petLoading) return;
-    if (!user) return; // O ProtectedRoute já redireciona, mas garantimos que o user existe para o resto do código.
-    if (myPets.length === 0) return; // O ProtectedRoute já redireciona, mas garantimos que há pets.
-    if (!currentPet) return; // Garante que o pet atual está selecionado.
-  }, [authLoading, petLoading, user, myPets, currentPet]);
-
   // --- BUSCA POSTS QUANDO O PET ATUAL EXISTE OU É PROFISSIONAL ---
   useEffect(() => {
     if (authLoading || petLoading || profileLoading) return;
     
     const isProfessional = profile?.account_type === 'professional';
     
-    // Profissionais podem ver o feed mesmo sem pet
     if (isProfessional) {
       fetchFeedPostsForProfessional();
     } else if (currentPet) {
       fetchFeedPosts();
+    } else {
+      setLoading(false);
     }
   }, [currentPet, petLoading, authLoading, profileLoading, profile]);
 
   const fetchFeedPosts = async () => {
+    if (!currentPet) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
-    if (!currentPet) return;
+    try {
+      // 1. Pets seguidos
+      const { data: following, error: followingError } = await supabase
+        .from("followers")
+        .select("target_pet_id")
+        .eq("follower_id", currentPet.id)
+        .eq("is_user_follower", false);
 
-    // Pets seguidos
-    const { data: following } = await supabase
-      .from("followers")
-      .select("target_pet_id")
-      .eq("follower_pet_id", currentPet.id);
+      if (followingError) throw followingError;
+      
+      const followingPetIds = following?.map(f => f.target_pet_id) || [];
+      
+      // 2. Incluir o próprio pet
+      const visiblePetIds = [...followingPetIds, currentPet.id];
 
-    const followingPetIds = following?.map(f => f.target_pet_id) || [];
-    const visiblePetIds = [...followingPetIds, currentPet.id];
+      // 3. Buscar posts ordenados por data
+      const { data, error: postsError } = await supabase
+        .from("posts")
+        .select(`
+          *, 
+          pet:pet_id(
+            id, 
+            name, 
+            avatar_url, 
+            guardian_name,
+            user_id
+          )
+        `)
+        .in("pet_id", visiblePetIds)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    const { data } = await supabase
-      .from("posts")
-      .select("*, pet:pet_id(*)")
-      .in("pet_id", visiblePetIds)
-      .order("created_at", { ascending: false })
-      .limit(50);
+      if (postsError) throw postsError;
 
-    setPosts(data || []);
-    setLoading(false);
+      setPosts(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar posts do feed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchFeedPostsForProfessional = async () => {
-    setLoading(true);
-
     if (!user) {
       setPosts([]);
       setLoading(false);
       return;
     }
 
-    // 1. Buscar os pets seguidos pelo profissional
-    const { data: following, error: followingError } = await supabase
-      .from("followers")
-      .select("target_pet_id")
-      .eq("follower_id", user.id)
-      .eq("is_user_follower", true);
+    setLoading(true);
 
-    if (followingError) {
-      console.error("Erro ao buscar pets seguidos pelo profissional:", followingError);
-      setPosts([]);
-      setLoading(false);
-      return;
-    }
+    try {
+      // 1. Buscar os pets seguidos pelo profissional
+      const { data: following, error: followingError } = await supabase
+        .from("followers")
+        .select("target_pet_id")
+        .eq("follower_id", user.id)
+        .eq("is_user_follower", true);
 
-    const followingPetIds = following?.map(f => f.target_pet_id) || [];
-    
-    // Se não segue ninguém, o feed fica vazio
-    if (followingPetIds.length === 0) {
-      setPosts([]);
-      setLoading(false);
-      return;
-    }
+      if (followingError) throw followingError;
 
-    // 2. Buscar posts dos pets seguidos
-    const { data, error } = await supabase
-      .from("posts")
-      .select(`
-        *, 
-        pet:pet_id(
-          id, 
-          name, 
-          avatar_url, 
-          guardian_name, 
-          user_profiles:user_id(account_type)
-        )
-      `)
-      .in("pet_id", followingPetIds)
-      .order("created_at", { ascending: false })
-      .limit(50);
+      const followingPetIds = following?.map(f => f.target_pet_id) || [];
+      
+      // Se não segue ninguém, o feed fica vazio
+      if (followingPetIds.length === 0) {
+        setPosts([]);
+        return;
+      }
 
-    if (error) {
+      // 2. Buscar posts dos pets seguidos
+      const { data, error: postsError } = await supabase
+        .from("posts")
+        .select(`
+          *, 
+          pet:pet_id(
+            id, 
+            name, 
+            avatar_url, 
+            guardian_name,
+            user_id
+          )
+        `)
+        .in("pet_id", followingPetIds)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (postsError) throw postsError;
+
+      setPosts(data || []);
+    } catch (error) {
       console.error("Erro ao buscar posts para profissional:", error);
-      setPosts([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setPosts(data || []);
-    setLoading(false);
   };
 
   // --- TELA DE LOADING DO SISTEMA ---
@@ -145,17 +155,13 @@ const Feed = () => {
     return <LoadingScreen message="Carregando seu Pet..." />;
   }
 
-  // Se é profissional, não precisa de pet para acessar o feed
   const isProfessional = profile?.account_type === 'professional';
-  if (!isProfessional && (!myPets || myPets.length === 0 || !currentPet)) {
-    return <LoadingScreen message="Carregando seu Pet..." />;
-  }
 
   return (
     <MainLayout>
       <div className="container max-w-xl py-6 space-y-6">
         
-        {/* STORIES BAR - NOVO */}
+        {/* STORIES BAR */}
         <StoriesBar />
 
         {/* Card de criar post - apenas para usuários com pet */}
@@ -231,12 +237,14 @@ const Feed = () => {
               <p className="text-muted-foreground mb-4">
                 Siga novos pets ou compartilhe algo!
               </p>
-              <Link to="/create-post">
-                <Button className="gradient-bg">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Criar Post
-                </Button>
-              </Link>
+              {!isProfessional && (
+                <Link to="/create-post">
+                  <Button className="gradient-bg">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Criar Post
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 

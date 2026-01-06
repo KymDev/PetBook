@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Loader2, Upload, PawPrint } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 const petSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(50),
@@ -56,12 +57,8 @@ const CreatePet = () => {
     guardian_instagram_username: "",
   });
 
-  if (!user) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>Carregando usuário...</p>
-    </div>
-   );
+  if (!user || loading) {
+    return <LoadingScreen message="Carregando..." />;
   }
 
 

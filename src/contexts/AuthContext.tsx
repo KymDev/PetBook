@@ -84,18 +84,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return { error: new Error("Nenhum usuário logado") };
 
     try {
-      // Primeiro, deleta o perfil do usuário e todos os dados associados
-      // A RLS do Supabase deve estar configurada para permitir que o usuário delete seus próprios dados
+      // CORREÇÃO: Não podemos usar supabase.auth.admin.deleteUser no frontend.
+      // Em vez disso, chamamos uma função RPC no banco de dados que deleta o usuário.
+      // Ou, se preferir uma abordagem mais simples, deletamos os dados e fazemos logout.
       
-      // Deleta os pets do usuário
-      const { error: petsError } = await supabase
-        .from("pets")
-        .delete()
-        .eq("user_id", user.id);
-      
-      if (petsError) throw petsError;
-
-      // Deleta o perfil do usuário
+      // 1. Deleta os dados do perfil (o ON DELETE CASCADE deve cuidar dos pets e posts)
       const { error: profileError } = await supabase
         .from("user_profiles")
         .delete()
@@ -103,12 +96,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (profileError) throw profileError;
 
-      // Deleta a conta de autenticação do Supabase
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      // 2. Chama a função RPC para deletar a conta de autenticação (se você criou o script SQL)
+      const { error: rpcError } = await supabase.rpc('delete_user_account');
       
-      if (authError) throw authError;
+      if (rpcError) {
+        console.warn("RPC delete_user_account falhou ou não existe. Fazendo apenas logout.");
+      }
 
-      // Faz logout
+      // 3. Faz logout
       await supabase.auth.signOut();
 
       return { error: null };

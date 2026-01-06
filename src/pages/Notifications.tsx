@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet, Pet } from "@/contexts/PetContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell } from "lucide-react";
+import { Bell, MessageSquare, UserPlus, Heart, PawPrint, Cookie, Stethoscope, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -16,41 +18,63 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   related_pet_id: string | null;
-  related_user_id: string | null; // Adicionado
+  related_user_id: string | null;
+  related_post_id: string | null;
   relatedPet?: Pet;
-  relatedUser?: { full_name: string, avatar_url: string | null }; // Adicionado
+  relatedUser?: { full_name: string, professional_avatar_url: string | null, account_type: string };
 }
 
 const Notifications = () => {
   const { currentPet } = usePet();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const navigate = useNavigate();
+
+  const { profile } = useUserProfile();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (currentPet) fetchNotifications();
-  }, [currentPet]);
+    const isProfessional = profile?.account_type === 'professional';
+    if (currentPet || (isProfessional && user)) fetchNotifications();
+  }, [currentPet, profile, user]);
 
   const fetchNotifications = async () => {
-    if (!currentPet) return;
-    const { data } = await supabase
+    const isProfessional = profile?.account_type === 'professional';
+    
+    let query = supabase
       .from("notifications")
       .select("*")
-      .eq("pet_id", currentPet.id)
       .order("created_at", { ascending: false })
       .limit(50);
+
+    if (isProfessional && user) {
+      query = query.eq("related_user_id", user.id);
+    } else if (user) {
+      const { data: userPets } = await supabase.from("pets").select("id").eq("user_id", user.id);
+      const petIds = userPets?.map(p => p.id) || [];
+      if (petIds.length > 0) {
+        query = query.in("pet_id", petIds);
+      } else {
+        setNotifications([]);
+        return;
+      }
+    } else {
+      return;
+    }
+
+    const { data } = await query;
 
     if (data) {
       const withRelatedData = await Promise.all(
         data.map(async (n) => {
           let relatedPet: Pet | undefined;
-          let relatedUser: { full_name: string, avatar_url: string | null } | undefined;
+          let relatedUser: any | undefined;
 
           if (n.related_pet_id) {
             const { data: pet } = await supabase.from("pets").select("*").eq("id", n.related_pet_id).single();
             relatedPet = pet as Pet;
           } else if (n.related_user_id) {
-            // Buscar informações do usuário (profissional)
-            const { data: userProfile } = await supabase.from("user_profiles").select("full_name, avatar_url").eq("id", n.related_user_id).single();
-            relatedUser = userProfile as { full_name: string, avatar_url: string | null };
+            const { data: userProfile } = await supabase.from("user_profiles").select("full_name, professional_avatar_url, account_type").eq("id", n.related_user_id).single();
+            relatedUser = userProfile;
           }
 
           return { ...n, relatedPet, relatedUser };
@@ -59,7 +83,28 @@ const Notifications = () => {
       setNotifications(withRelatedData);
       
       // Mark as read
-      await supabase.from("notifications").update({ is_read: true }).eq("pet_id", currentPet.id).eq("is_read", false);
+      let updateQuery = supabase.from("notifications").update({ is_read: true }).eq("is_read", false);
+      if (isProfessional && user) {
+        await updateQuery.eq("related_user_id", user.id);
+      } else if (user) {
+        const { data: userPets } = await supabase.from("pets").select("id").eq("user_id", user.id);
+        const petIds = userPets?.map(p => p.id) || [];
+        if (petIds.length > 0) {
+          await updateQuery.in("pet_id", petIds);
+        }
+      }
+    }
+  };
+
+  const handleNotificationClick = (n: Notification) => {
+    if (n.related_post_id) {
+      // Se tiver post, poderia ir para o post, mas como não temos rota de post único clara, 
+      // vamos para o perfil do pet que postou
+      if (n.related_pet_id) navigate(`/pet/${n.related_pet_id}`);
+    } else if (n.related_pet_id) {
+      navigate(`/pet/${n.related_pet_id}`);
+    } else if (n.type === 'health_access_request' || n.type === 'health_reminder') {
+      if (currentPet) navigate(`/pets/${currentPet.id}/saude`);
     }
   };
 
@@ -76,29 +121,48 @@ const Notifications = () => {
           </Card>
         ) : (
           notifications.map((n) => (
-            <Card key={n.id} className={`card-elevated border-0 ${!n.is_read ? "ring-2 ring-primary/20" : ""}`}>
+            <Card 
+              key={n.id} 
+              className={`card-elevated border-0 cursor-pointer transition-colors hover:bg-muted/50 ${!n.is_read ? "ring-2 ring-primary/20" : ""}`}
+              onClick={() => handleNotificationClick(n)}
+            >
               <CardContent className="flex items-center gap-4 p-4">
                 {n.relatedPet ? (
-                  <Link to={`/pet/${n.relatedPet.id}`}>
-                    <Avatar>
-                      <AvatarImage src={n.relatedPet.avatar_url || undefined} />
-                      <AvatarFallback>{n.relatedPet.name[0]}</AvatarFallback>
-                    </Avatar>
-                  </Link>
+                  <Avatar>
+                    <AvatarImage src={n.relatedPet.avatar_url || undefined} />
+                    <AvatarFallback>{n.relatedPet.name[0]}</AvatarFallback>
+                  </Avatar>
                 ) : n.relatedUser ? (
-                  <Link to={`/profile/${n.relatedUser.full_name}`}>
-                    <Avatar>
-                      <AvatarImage src={n.relatedUser.avatar_url || undefined} />
-                      <AvatarFallback>{n.relatedUser.full_name[0]}</AvatarFallback>
-                    </Avatar>
-                  </Link>
+                  <Avatar>
+                    <AvatarImage src={n.relatedUser.professional_avatar_url || undefined} />
+                    <AvatarFallback className={n.relatedUser?.account_type === 'professional' ? 'bg-secondary text-secondary-foreground' : ''}>
+                      {n.relatedUser?.full_name?.[0] || '?'}
+                    </AvatarFallback>
+                  </Avatar>
                 ) : (
                   <div className="h-10 w-10 rounded-full gradient-bg flex items-center justify-center">
                     <Bell className="h-5 w-5 text-white" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-sm">{n.message}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm">{n.message}</p>
+                    <div className="mt-1">
+                      {(() => {
+                        switch (n.type) {
+                          case "message": return <MessageSquare className="h-4 w-4 text-blue-500" />;
+                          case "follow": return <UserPlus className="h-4 w-4 text-primary" />;
+                          case "like": return <Heart className="h-4 w-4 text-secondary" />;
+                          case "abraco": return <Heart className="h-4 w-4 text-secondary" />;
+                          case "patinha": return <PawPrint className="h-4 w-4 text-primary" />;
+                          case "petisco": return <Cookie className="h-4 w-4 text-amber-500" />;
+                          case "health_access_request": return <Stethoscope className="h-4 w-4 text-blue-500" />;
+                          case "health_reminder": return <Clock className="h-4 w-4 text-purple-500" />;
+                          default: return <Bell className="h-4 w-4 text-muted-foreground" />;
+                        }
+                      })()}
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                   </p>

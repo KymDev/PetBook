@@ -1,8 +1,9 @@
-import { Briefcase, BadgeCheck, Shield } from "lucide-react";
+import { Briefcase, BadgeCheck, Shield, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProfessionalBadgeProps {
   isProfessional: boolean;
+  serviceType?: string;
   size?: "sm" | "md" | "lg";
   showText?: boolean;
   className?: string;
@@ -10,11 +11,14 @@ interface ProfessionalBadgeProps {
 
 export const ProfessionalBadge = ({
   isProfessional,
+  serviceType,
   size = "md",
   showText = true,
   className,
 }: ProfessionalBadgeProps) => {
   if (!isProfessional) return null;
+
+  const isHealthProfessional = serviceType === 'veterinario';
 
   const sizeClasses = {
     sm: "w-5 h-5",
@@ -31,23 +35,42 @@ export const ProfessionalBadge = ({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/30 shadow-sm",
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r shadow-sm",
+        isHealthProfessional 
+          ? "from-blue-500/10 to-cyan-500/10 border-blue-500/30" 
+          : "from-secondary/10 to-primary/10 border-secondary/30",
         className
       )}
     >
-      <div className={cn("flex items-center justify-center rounded-full bg-secondary/20", sizeClasses[size])}>
-        <Briefcase className={cn("text-secondary", {
-          "w-3 h-3": size === "sm",
-          "w-4 h-4": size === "md",
-          "w-5 h-5": size === "lg",
-        })} />
+      <div className={cn(
+        "flex items-center justify-center rounded-full", 
+        isHealthProfessional ? "bg-blue-500/20" : "bg-secondary/20",
+        sizeClasses[size]
+      )}>
+        {isHealthProfessional ? (
+          <Stethoscope className={cn("text-blue-600", {
+            "w-3 h-3": size === "sm",
+            "w-4 h-4": size === "md",
+            "w-5 h-5": size === "lg",
+          })} />
+        ) : (
+          <Briefcase className={cn("text-secondary", {
+            "w-3 h-3": size === "sm",
+            "w-4 h-4": size === "md",
+            "w-5 h-5": size === "lg",
+          })} />
+        )}
       </div>
       {showText && (
-        <span className={cn("font-semibold text-secondary-foreground", textSizeClasses[size])}>
-          Profissional
+        <span className={cn(
+          "font-semibold", 
+          isHealthProfessional ? "text-blue-700" : "text-secondary-foreground",
+          textSizeClasses[size]
+        )}>
+          {isHealthProfessional ? "Profissional de Saúde Pet" : "Profissional"}
         </span>
       )}
-      <BadgeCheck className={cn("text-secondary", {
+      <BadgeCheck className={cn(isHealthProfessional ? "text-blue-600" : "text-secondary", {
         "w-3 h-3": size === "sm",
         "w-4 h-4": size === "md",
         "w-5 h-5": size === "lg",
@@ -56,12 +79,18 @@ export const ProfessionalBadge = ({
   );
 };
 
-export const ProfessionalBadgeSmall = ({ isProfessional }: { isProfessional: boolean }) => {
+export const ProfessionalBadgeSmall = ({ isProfessional, serviceType }: { isProfessional: boolean, serviceType?: string }) => {
   if (!isProfessional) return null;
+  const isHealthProfessional = serviceType === 'veterinario';
 
   return (
-    <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-secondary/20 border border-secondary/40 text-secondary font-bold text-xs">
-      P
+    <div className={cn(
+      "inline-flex items-center justify-center w-6 h-6 rounded-full border font-bold text-xs",
+      isHealthProfessional 
+        ? "bg-blue-500/20 border-blue-500/40 text-blue-600" 
+        : "bg-secondary/20 border-secondary/40 text-secondary"
+    )}>
+      {isHealthProfessional ? <Stethoscope className="w-3 h-3" /> : "P"}
     </div>
   );
 };
@@ -69,14 +98,17 @@ export const ProfessionalBadgeSmall = ({ isProfessional }: { isProfessional: boo
 // Selo de verificação profissional - Versão compacta com ícone
 export const ProfessionalVerifiedBadge = ({ 
   isProfessional, 
+  serviceType,
   size = "md",
   variant = "default" 
 }: { 
   isProfessional: boolean; 
+  serviceType?: string;
   size?: "sm" | "md" | "lg";
   variant?: "default" | "minimal";
 }) => {
   if (!isProfessional) return null;
+  const isHealthProfessional = serviceType === 'veterinario';
 
   const sizeClasses = {
     sm: "w-4 h-4",
@@ -88,7 +120,7 @@ export const ProfessionalVerifiedBadge = ({
     return (
       <BadgeCheck 
         className={cn(
-          "text-secondary fill-secondary/20",
+          isHealthProfessional ? "text-blue-600 fill-blue-500/20" : "text-secondary fill-secondary/20",
           sizeClasses[size]
         )} 
       />
@@ -96,9 +128,16 @@ export const ProfessionalVerifiedBadge = ({
   }
 
   return (
-    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/30">
-      <BadgeCheck className={cn("text-secondary", sizeClasses[size])} />
-      <span className="text-xs font-semibold text-secondary">Verificado</span>
+    <div className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full border",
+      isHealthProfessional 
+        ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30" 
+        : "bg-gradient-to-r from-secondary/10 to-primary/10 border-secondary/30"
+    )}>
+      <BadgeCheck className={cn(isHealthProfessional ? "text-blue-600" : "text-secondary", sizeClasses[size])} />
+      <span className={cn("text-xs font-semibold", isHealthProfessional ? "text-blue-700" : "text-secondary")}>
+        {isHealthProfessional ? "Saúde Verificada" : "Verificado"}
+      </span>
     </div>
   );
 };

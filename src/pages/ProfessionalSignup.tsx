@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import { geocodeAddress } from "@/integrations/supabase/geolocationService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,19 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Briefcase, MapPin, Award, DollarSign, ArrowLeft, Loader2 } from "lucide-react";
+import { Briefcase, MapPin, Award, DollarSign, ArrowLeft, Loader2, Stethoscope } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 const PROFESSIONAL_TYPES = [
-  { value: "veterinarian", label: "Veterinário(a)" },
-  { value: "pet_groomer", label: "Pet Groomer" },
-  { value: "pet_trainer", label: "Treinador(a) de Pets" },
+  { value: "veterinario", label: "Veterinário(a)" },
+  { value: "banho_tosa", label: "Banho & Tosa" },
+  { value: "passeador", label: "Passeador" },
+  { value: "loja", label: "Loja Pet" },
+  { value: "hotel", label: "Hotel Pet" },
+  { value: "treinador", label: "Treinador(a) de Pets" },
   { value: "pet_sitter", label: "Pet Sitter" },
-  { value: "pet_shop", label: "Pet Shop" },
-  { value: "dog_walker", label: "Dog Walker" },
-  { value: "pet_photographer", label: "Fotógrafo(a) de Pets" },
-  { value: "other", label: "Outro" },
+  { value: "fotografo", label: "Fotógrafo(a) de Pets" },
+  { value: "outro", label: "Outro" },
 ];
 
 const SPECIALTIES = [
@@ -38,6 +40,17 @@ const SPECIALTIES = [
   "Peixes",
   "Coelhos",
   "Hamsters",
+  "Cirurgia",
+  "Dermatologia",
+  "Cardiologia",
+  "Ortopedia",
+  "Comportamento",
+  "Nutrição",
+  "Emergência 24h"
+];
+
+const BRAZILIAN_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
 export default function ProfessionalSignup() {
@@ -49,12 +62,18 @@ export default function ProfessionalSignup() {
     professional_service_type: "",
     professional_bio: "",
     professional_phone: "",
+    professional_whatsapp: "",
     professional_address: "",
     professional_city: "",
     professional_state: "",
     professional_zip: "",
     professional_specialties: [] as string[],
     professional_price_range: "",
+    professional_crmv: "",
+    professional_crmv_state: "",
+    // Novos campos para geolocalização
+    professional_latitude: null as number | null,
+    professional_longitude: null as number | null,
   });
 
   if (!user) {
@@ -95,6 +114,17 @@ export default function ProfessionalSignup() {
       return;
     }
 
+    if (formData.professional_service_type === 'veterinario') {
+      if (!formData.professional_crmv.trim()) {
+        toast.error("CRMV é obrigatório para veterinários");
+        return;
+      }
+      if (!formData.professional_crmv_state) {
+        toast.error("Estado do CRMV é obrigatório para veterinários");
+        return;
+      }
+    }
+
     if (!formData.professional_bio.trim()) {
       toast.error("Preencha sua bio profissional");
       return;
@@ -115,6 +145,11 @@ export default function ProfessionalSignup() {
       return;
     }
 
+    if (!formData.professional_zip.trim()) {
+      toast.error("Preencha seu CEP");
+      return;
+    }
+
     if (formData.professional_specialties.length === 0) {
       toast.error("Selecione pelo menos uma especialidade");
       return;
@@ -122,11 +157,31 @@ export default function ProfessionalSignup() {
 
     setLoading(true);
     try {
+      // 1. Tentar geocodificar o endereço
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      
+      const fullAddress = `${formData.professional_address}, ${formData.professional_city}, ${formData.professional_state}, ${formData.professional_zip}`;
+      
+      if (formData.professional_city.trim() && formData.professional_state.trim()) {
+        try {
+          const location = await geocodeAddress(fullAddress);
+          latitude = location.latitude;
+          longitude = location.longitude;
+        } catch (geoError) {
+          console.warn("Erro ao geocodificar endereço, prosseguindo sem coordenadas:", geoError);
+          toast.warning("Não foi possível obter as coordenadas do endereço. A busca por proximidade pode ser limitada.");
+        }
+      }
+
       // 1. Atualizar o perfil do usuário para 'professional'
       await updateProfessionalProfile({
+        professional_latitude: latitude,
+        professional_longitude: longitude,
         account_type: "professional",
         professional_bio: formData.professional_bio,
         professional_phone: formData.professional_phone,
+        professional_whatsapp: formData.professional_whatsapp,
         professional_address: formData.professional_address,
         professional_city: formData.professional_city,
         professional_state: formData.professional_state,
@@ -134,47 +189,13 @@ export default function ProfessionalSignup() {
         professional_specialties: formData.professional_specialties,
         professional_service_type: formData.professional_service_type,
         professional_price_range: formData.professional_price_range,
+        professional_crmv: formData.professional_crmv,
+        professional_crmv_state: formData.professional_crmv_state,
       });
 
-      // 2. Criar ou atualizar o registro na tabela service_providers
-      // Nota: A tabela service_providers é usada para a busca de serviços.
-      // O ID do provedor deve ser o mesmo ID do usuário.
-      const serviceProviderData = {
-        id: user.id, // Usar o ID do usuário como ID do provedor
-        name: user.email || "Profissional PetBook", // Usar o email como nome inicial (pode ser alterado depois)
-        service_type: formData.professional_service_type,
-        description: formData.professional_bio,
-        phone: formData.professional_phone,
-        address: formData.professional_address,
-        city: formData.professional_city,
-        state: formData.professional_state,
-        zip: formData.professional_zip,
-        // is_verified: false, // O default é false
-      };
-
-      // Tentar atualizar primeiro (se já existir)
-      const { error: updateError } = await supabase
-        .from("service_providers")
-        .update(serviceProviderData)
-        .eq("id", user.id);
-
-      if (updateError && updateError.code !== 'PGRST116') { // PGRST116 é "não encontrado"
-        // Se a atualização falhar por outro motivo que não seja "não encontrado", lançar erro
-        throw updateError;
-      }
-
-      // Se a atualização falhou por "não encontrado" ou se não houve erro, tentar inserir
-      if (updateError && updateError.code === 'PGRST116') {
-        const { error: insertError } = await supabase
-          .from("service_providers")
-          .insert(serviceProviderData);
-
-        if (insertError) throw insertError;
-      }
-
       toast.success("Perfil profissional criado com sucesso!");
-      await refreshProfile(); // Força a atualização do contexto após o sucesso
-      navigate("/feed");
+      await refreshProfile();
+      navigate("/professional-dashboard");
     } catch (error) {
       console.error("Erro ao criar perfil profissional:", error);
       toast.error("Erro ao criar perfil profissional");
@@ -257,13 +278,59 @@ export default function ProfessionalSignup() {
                   </Select>
                 </div>
 
+                {/* CRMV Fields for Veterinarians */}
+                {formData.professional_service_type === 'veterinario' && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-4 p-4 rounded-lg bg-blue-500/5 border border-blue-500/20"
+                  >
+                    <Label className="flex items-center gap-2 font-semibold text-blue-600">
+                      <Stethoscope className="w-4 h-4" />
+                      Dados do CRMV *
+                    </Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="professional_crmv">Número CRMV</Label>
+                        <Input
+                          id="professional_crmv"
+                          name="professional_crmv"
+                          placeholder="00000"
+                          value={formData.professional_crmv}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="professional_crmv_state">Estado (UF)</Label>
+                        <Select 
+                          value={formData.professional_crmv_state} 
+                          onValueChange={(val) => setFormData(prev => ({ ...prev, professional_crmv_state: val }))}
+                        >
+                          <SelectTrigger id="professional_crmv_state">
+                            <SelectValue placeholder="UF" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BRAZILIAN_STATES.map(state => (
+                              <SelectItem key={state} value={state}>{state}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Esses dados são necessários para exibir o selo de "Profissional de Saúde Pet".
+                    </p>
+                  </motion.div>
+                )}
+
                 {/* Bio */}
                 <div className="space-y-2">
                   <Label htmlFor="professional_bio" className="font-semibold">Bio Profissional *</Label>
                   <Textarea
                     id="professional_bio"
                     name="professional_bio"
-                    placeholder="Descreva sua experiência, especialidades e o que torna você único..."
+                    placeholder="Conte um pouco sobre sua experiência e serviços..."
+                    maxLength={500}
                     value={formData.professional_bio}
                     onChange={handleInputChange}
                     className="min-h-24 resize-none"
@@ -274,20 +341,34 @@ export default function ProfessionalSignup() {
                 </div>
 
                 {/* Contact */}
-                <div className="space-y-2">
-                  <Label htmlFor="professional_phone" className="font-semibold">Telefone/WhatsApp *</Label>
-                  <Input
-                    id="professional_phone"
-                    name="professional_phone"
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    value={formData.professional_phone}
-                    onChange={handleInputChange}
-                    className="h-11"
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="professional_phone" className="font-semibold">Telefone (Obrigatório) *</Label>
+                    <Input
+                      id="professional_phone"
+                      name="professional_phone"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={formData.professional_phone}
+                      onChange={handleInputChange}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="professional_whatsapp" className="font-semibold">WhatsApp (Opcional)</Label>
+                    <Input
+                      id="professional_whatsapp"
+                      name="professional_whatsapp"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={formData.professional_whatsapp}
+                      onChange={handleInputChange}
+                      className="h-11"
+                    />
+                  </div>
                 </div>
 
-                {/* Location - MANDATORY */}
+                {/* Location */}
                 <div className="space-y-3 p-4 rounded-lg bg-secondary/5 border border-secondary/20">
                   <Label className="flex items-center gap-2 font-semibold text-base">
                     <MapPin className="w-4 h-4" />
@@ -330,7 +411,7 @@ export default function ProfessionalSignup() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="professional_zip" className="text-sm">CEP (opcional)</Label>
+                    <Label htmlFor="professional_zip" className="font-semibold">CEP *</Label>
                     <Input
                       id="professional_zip"
                       name="professional_zip"
@@ -373,16 +454,27 @@ export default function ProfessionalSignup() {
                 <div className="space-y-2">
                   <Label htmlFor="professional_price_range" className="flex items-center gap-2 font-semibold">
                     <DollarSign className="w-4 h-4" />
-                    Faixa de Preço (opcional)
+                    Faixa de Preço (Opcional)
                   </Label>
-                  <Input
-                    id="professional_price_range"
-                    name="professional_price_range"
-                    placeholder="Ex: R$ 50 - R$ 150"
+                  <Select
                     value={formData.professional_price_range}
-                    onChange={handleInputChange}
-                    className="h-11"
-                  />
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        professional_price_range: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="professional_price_range" className="h-11">
+                      <SelectValue placeholder="Selecione uma faixa de preço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="R$">R$ (Baixo)</SelectItem>
+                      <SelectItem value="R$$">R$$ (Médio)</SelectItem>
+                      <SelectItem value="R$$$">R$$$ (Alto)</SelectItem>
+                      <SelectItem value="Sob Consulta">Sob Consulta</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Submit Button */}
