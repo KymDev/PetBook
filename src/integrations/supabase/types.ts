@@ -150,6 +150,51 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_logs: {
+        Row: {
+          id: string
+          pet_id: string
+          user_id: string
+          description: string | null
+          location: string | null
+          contact_phone: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          pet_id: string
+          user_id: string
+          description?: string | null
+          location?: string | null
+          contact_phone?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          pet_id?: string
+          user_id?: string
+          description?: string | null
+          location?: string | null
+          contact_phone?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_logs_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emergency_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       community_members: {
         Row: {
           community_id: string

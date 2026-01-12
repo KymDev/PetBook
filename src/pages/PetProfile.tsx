@@ -14,12 +14,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { HealthAccessButton } from "@/components/pet/HealthAccessButton";
-import { Heart, PawPrint, Cookie, ExternalLink, UserPlus, UserMinus, MessageCircle, Stethoscope, Settings, Users, ClipboardList } from "lucide-react";
+import { Heart, PawPrint, Cookie, ExternalLink, UserPlus, UserMinus, MessageCircle, Settings, Users, ClipboardList, Plus, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-// Novos componentes integrados
 import { GuardianPetHeader } from "@/components/layout/GuardianPetHeader";
-
+import { cn } from "@/lib/utils";
 
 interface Post {
   id: string;
@@ -33,7 +31,7 @@ interface Post {
 const PetProfile = () => {
   const { petId } = useParams<{ petId: string }>();
   const { user } = useAuth();
-  const { currentPet, followPet, unfollowPet, isProfessionalFollowing } = usePet();
+  const { currentPet, myPets, selectPet, followPet, unfollowPet, isProfessionalFollowing } = usePet();
   const { profile } = useUserProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -50,8 +48,6 @@ const PetProfile = () => {
   const [followingCount, setFollowingCount] = useState(0);
   const [healthAccessStatus, setHealthAccessStatus] = useState<'none' | 'pending' | 'granted' | 'revoked'>('none');
   const [healthAccessId, setHealthAccessId] = useState<string | null>(null);
-  
-
 
   useEffect(() => {
     if (petId) fetchPetProfile();
@@ -66,7 +62,7 @@ const PetProfile = () => {
       .eq("id", petId)
       .single();
 
-    const { data: badgesData } = await getPetBadges(petId);
+    const { data: badgesData } = await getPetBadges(petId!);
     if (badgesData) {
       setBadges(badgesData);
     }
@@ -178,7 +174,7 @@ const PetProfile = () => {
           await supabase.from("notifications").insert({
             pet_id: pet.id,
             type: "follow",
-            message: `${profile?.full_name || "Um Profissional de Serviço"} começou a seguir você!`,
+            message: `${profile?.full_name || "Um Profissional"} começou a seguir você!`,
             related_user_id: user.id,
             is_read: false,
           });
@@ -200,7 +196,7 @@ const PetProfile = () => {
     const messages = {
       abraco: `${currentPet.name} enviou um abraço! ❤️`,
       patinha: `${currentPet.name} enviou uma patinha! 🐾`,
-      petisco: `${currentPet.name} enviou um petisco! 🍖`,
+      petisco: `${currentPet.name} enviou um petisco! 🍪`,
     };
 
     await supabase.from("notifications").insert({
@@ -250,179 +246,215 @@ const PetProfile = () => {
 
   return (
     <MainLayout>
-      {/* Header de Saúde no Topo */}
+      {/* Header - Esconde o botão de saúde se for o guardião visualizando seu próprio pet ou família */}
       <GuardianPetHeader 
         petName={pet.name} 
+        showHealthButton={!isFamily}
       />
 
-      <div className="container max-w-xl py-6 space-y-6">
+      <div className="container max-w-xl px-0 md:px-4 py-0 md:py-6 space-y-0 md:space-y-6">
+        <div className="px-4 md:px-0 py-4 md:py-0 space-y-6">
+          {/* Perfil Principal */}
+          <Card className="card-elevated border-0 overflow-hidden">
+            <div className="h-24 gradient-bg" />
+            <CardContent className="relative pt-0 pb-6">
+              <Avatar className="h-24 w-24 border-4 border-card -mt-12 mx-auto">
+                <AvatarImage src={pet.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                  {pet.name[0]}
+                </AvatarFallback>
+              </Avatar>
 
-        {/* Perfil Principal */}
-        <Card className="card-elevated border-0 overflow-hidden">
-          <div className="h-24 gradient-bg" />
-          <CardContent className="relative pt-0 pb-6">
-            <Avatar className="h-24 w-24 border-4 border-card -mt-12 mx-auto">
-              <AvatarImage src={pet.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                {pet.name[0]}
-              </AvatarFallback>
-            </Avatar>
+              <div className="text-center mt-4 space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <h1 className="text-2xl font-heading font-bold">{pet.name}</h1>
+                  {isFamily && (
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white border-none">
+                      <Users className="h-3 w-3 mr-1" />
+                      Família
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 mt-2">
+                  {badges.map((badge) => (
+                    <BadgeDisplay key={badge.id} badgeType={badge.badge_type} />
+                  ))}
+                </div>
+                <p className="text-muted-foreground">
+                  {pet.species} • {pet.breed} • {pet.age} anos
+                </p>
+                {pet.bio && <p className="text-sm">{pet.bio}</p>}
+              </div>
 
-            <div className="text-center mt-4 space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <h1 className="text-2xl font-heading font-bold">{pet.name}</h1>
-                {isFamily && (
-                  <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white border-none">
-                    <Users className="h-3 w-3 mr-1" />
-                    Família
-                  </Badge>
+              {/* Stats */}
+              <div className="flex justify-center gap-8 mt-4 py-4 border-y border-border">
+                <div className="text-center">
+                  <p className="text-xl font-bold">{posts.length}</p>
+                  <p className="text-xs text-muted-foreground">Posts</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold">{followersCount}</p>
+                  <p className="text-xs text-muted-foreground">Seguidores</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold">{followingCount}</p>
+                  <p className="text-xs text-muted-foreground">Seguindo</p>
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex flex-wrap justify-center gap-3 mt-6">
+                {isFamily ? (
+                  <>
+                    <Button onClick={() => navigate(`/pet/${petId}/health`)} className="gap-2 gradient-bg">
+                      <ClipboardList className="h-4 w-4" />
+                      Prontuário de Saúde
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(`/edit-pet/${petId}`)} className="gap-2">
+                      <Settings className="h-4 w-4" />
+                      Configurações
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {(currentPet || isProfessional) && (
+                      <Button
+                        onClick={handleFollow}
+                        variant={isFollowing ? "outline" : "default"}
+                        className={!isFollowing ? "gradient-bg" : ""}
+                      >
+                        {isFollowing ? (
+                          <>
+                            <UserMinus className="h-4 w-4 mr-2" />
+                            Deixar de seguir
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Seguir
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {(currentPet || isProfessional) && (
+                      <Link to={isProfessional ? `/chat/professional/${pet.user_id}` : `/chat/${pet.id}`}>
+                        <Button variant="outline" className="gap-2">
+                          <MessageCircle className="h-4 w-4" /> Chat
+                        </Button>
+                      </Link>
+                    )}
+
+                    {currentPet && !isFamily && !isProfessional && (
+                      <>
+                        <Button variant="outline" onClick={() => handleInteraction("abraco")} className="gap-2">
+                          <Heart className="h-4 w-4 text-secondary" /> Abraço
+                        </Button>
+                        <Button variant="outline" onClick={() => handleInteraction("patinha")} className="gap-2">
+                          <PawPrint className="h-4 w-4 text-primary" /> Patinha
+                        </Button>
+                        <Button variant="outline" onClick={() => handleInteraction("petisco")} className="gap-2">
+                          <Cookie className="h-4 w-4 text-amber-500" /> Petisco
+                        </Button>
+                      </>
+                    )}
+
+                    {guardianProfile?.account_type === 'professional' && guardianProfile?.professional_whatsapp && (
+                      <a 
+                        href={`https://wa.me/${guardianProfile.professional_whatsapp.replace(/\D/g, '' )}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        <Button className="bg-green-500 hover:bg-green-600 text-white gap-2">
+                          <MessageCircle className="h-4 w-4" /> WhatsApp Profissional
+                        </Button>
+                      </a>
+                    )}
+
+                    {isProfessional && user && petId && (
+                      <HealthAccessButton 
+                        petId={petId} 
+                        professionalId={user.id} 
+                        status={healthAccessStatus} 
+                        onStatusChange={setHealthAccessStatus}
+                        isFollowing={isFollowing}
+                        professionalServiceType={profile?.professional_service_type}
+                      />
+                    )}
+                  </>
                 )}
               </div>
-              <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {badges.map((badge) => (
-                  <BadgeDisplay key={badge.id} badgeType={badge.badge_type} />
-                ))}
-              </div>
-              <p className="text-muted-foreground">
-                {pet.species} • {pet.breed} • {pet.age} anos
-              </p>
-              {pet.bio && <p className="text-sm">{pet.bio}</p>}
-            </div>
-
-            {/* Stats */}
-            <div className="flex justify-center gap-8 mt-4 py-4 border-y border-border">
-              <div className="text-center">
-                <p className="text-xl font-bold">{posts.length}</p>
-                <p className="text-xs text-muted-foreground">Posts</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold">{followersCount}</p>
-                <p className="text-xs text-muted-foreground">Seguidores</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold">{followingCount}</p>
-                <p className="text-xs text-muted-foreground">Seguindo</p>
-              </div>
-            </div>
-
-            {/* Ações */}
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
-              {isOwnPet || isFamily ? (
-                <>
-                  <Button onClick={() => navigate(`/pets/${petId}/saude`)} className="gap-2 gradient-bg">
-                    <ClipboardList className="h-4 w-4" />
-                    Prontuário de Saúde
-                  </Button>
-                  <Button variant="outline" onClick={() => navigate(`/edit-pet/${petId}`)} className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Configurações
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {(currentPet || isProfessional) && !isFamily && (
-                    <Button
-                      onClick={handleFollow}
-                      variant={isFollowing ? "outline" : "default"}
-                      className={!isFollowing ? "gradient-bg" : ""}
-                    >
-                      {isFollowing ? (
-                        <>
-                          <UserMinus className="h-4 w-4 mr-2" />
-                          Deixar de seguir
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Seguir
-                        </>
-                      )}
-                    </Button>
-                  )}
-
-                  {/* Botão de Chat - Visível para Guardiões e Profissionais */}
-                  {(currentPet || isProfessional) && (
-                    <Link to={isProfessional ? `/chat/professional/${pet.user_id}` : `/chat/${pet.id}`}>
-                      <Button variant="outline" className="gap-2">
-                        <MessageCircle className="h-4 w-4" /> Chat
-                      </Button>
-                    </Link>
-                  )}
-
-                  {currentPet && !isFamily && (
-                    <>
-                      <Button variant="outline" onClick={() => handleInteraction("abraco")} className="gap-2">
-                        <Heart className="h-4 w-4 text-secondary" /> Abraço
-                      </Button>
-
-                      <Button variant="outline" onClick={() => handleInteraction("patinha")} className="gap-2">
-                        <PawPrint className="h-4 w-4 text-primary" /> Patinha
-                      </Button>
-
-                      <Button variant="outline" onClick={() => handleInteraction("petisco")} className="gap-2">
-                        <Cookie className="h-4 w-4 text-amber-500" /> Petisco
-                      </Button>
-                    </>
-                  )}
-
-                  {/* Botão de WhatsApp Profissional */}
-                  {guardianProfile?.account_type === 'professional' && guardianProfile?.professional_whatsapp && (
-                    <a 
-                      href={`https://wa.me/${guardianProfile.professional_whatsapp.replace(/\D/g, '' )}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <Button className="bg-green-500 hover:bg-green-600 text-white gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 2C6.477 2 2 6.477 2 12c0 3.31 1.28 6.31 3.36 8.54l-1.3 3.16 3.36-.88c1.97 1.08 4.2 1.68 6.58 1.68 5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="currentColor"/><path d="M17.5 15.5c-.2-.1-.8-.4-1.2-.5s-.7-.1-1.1.1c-.4.2-.6.7-.8.8s-.4.2-.8.1c-.4-.1-.9-.3-1.7-.8-.6-.4-1.1-.9-1.5-1.4s-.6-.9-.6-1.4c0-.5.1-.8.2-1s.4-.4.6-.6c.2-.2.4-.4.5-.5s.3-.3.4-.5c.1-.2 0-.4 0-.5s-.2-.4-.3-.6c-.1-.2-.3-.5-.5-.7s-.4-.4-.6-.6c-.2-.2-.4-.4-.4-.4s-.3-.2-.4-.2c-.1 0-.3 0-.5 0s-.4.1-.6.3c-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.5 2.5 3.6 3.4s2.5.7 2.9.6c.4-.1.9-.4 1.1-.7s.4-.6.4-.9c.1-.3.1-.5 0-.7z" fill="white"/></svg>
-                        WhatsApp Profissional
-                      </Button>
-                    </a>
-                   )}
-
-                  {/* Ações de Saúde - Apenas para Profissionais */}
-                  {isProfessional && user && petId && (
-                    <HealthAccessButton 
-                      petId={petId} 
-                      professionalId={user.id} 
-                      status={healthAccessStatus} 
-                      onStatusChange={setHealthAccessStatus}
-                      isFollowing={isFollowing}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Guardian Info */}
-            <div className="mt-6 p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground mb-2">Guardião</p>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{pet.guardian_name}</span>
-                <a href={pet.guardian_instagram_url || "#"} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    @{pet.guardian_instagram_username} <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Posts */}
-        {posts.length === 0 ? (
-          <Card className="card-elevated border-0">
-            <CardContent className="py-12 text-center">
-              <PawPrint className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">Nenhum post ainda</p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-6">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={{ ...post, pet }} />
-            ))}
-          </div>
-        )}
+
+          {/* Gerenciamento de Pets (Apenas para o Guardião) */}
+          {isFamily && (
+            <Card className="card-elevated border-0 overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold flex items-center gap-2">
+                    <PawPrint className="h-4 w-4 text-primary" />
+                    Meus Pets
+                  </h3>
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/create-pet')} className="text-primary hover:text-primary/80 gap-1">
+                    <Plus className="h-4 w-4" /> Adicionar
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {myPets.map((myPet) => (
+                    <div 
+                      key={myPet.id}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer",
+                        myPet.id === pet.id ? "bg-primary/5 border-primary/20" : "hover:bg-muted border-transparent"
+                      )}
+                      onClick={() => {
+                        if (myPet.id !== pet.id) {
+                          selectPet(myPet);
+                          navigate(`/pet/${myPet.id}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border">
+                          <AvatarImage src={myPet.avatar_url || undefined} />
+                          <AvatarFallback>{myPet.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-bold text-sm">{myPet.name}</p>
+                          <p className="text-xs text-muted-foreground">{myPet.species}</p>
+                        </div>
+                      </div>
+                      {myPet.id === pet.id ? (
+                        <Badge variant="secondary" className="text-[10px]">Atual</Badge>
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="px-4 md:px-0 space-y-6">
+          {/* Posts */}
+          {posts.length === 0 ? (
+            <Card className="card-elevated border-0">
+              <CardContent className="py-12 text-center">
+                <PawPrint className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground">Nenhum post ainda</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={{ ...post, pet }} profile={profile} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </MainLayout>
   );

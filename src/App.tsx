@@ -32,6 +32,7 @@ import ProfessionalSignup from "./pages/ProfessionalSignup";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import ProfessionalPublicProfile from "./pages/ProfessionalPublicProfile";
 import EditPet from "./pages/EditPet";
+import ScanHealth from "./pages/ScanHealth";
 
 import HealthRecordsPage from "./components/HealthRecords/HealthRecordsPage";
 import { useQuery } from "@tanstack/react-query";
@@ -72,19 +73,9 @@ const RootRedirect = () => {
   if (!user) return <Navigate to="/auth" replace />;
   if (!profile) return <LoadingPage />;
 
-  // LÓGICA CRÍTICA: Se o usuário não tem pets E não escolheu ser profissional explicitamente,
-  // ele deve cair na tela de escolha (SignupChoice).
-  // Isso resolve o problema de cair direto em CreatePet.
-  
   const hasPets = myPets && myPets.length > 0;
   const isProfessional = profile.account_type === 'professional';
   
-  // Se não tem pet e não é profissional (ou o account_type ainda é o default 'user' mas sem pets)
-  if (!hasPets && !isProfessional) {
-    // Se o perfil foi recém criado ou o usuário nunca tomou uma decisão, vai para escolha
-    return <Navigate to="/signup-choice" replace />;
-  }
-
   // Se é profissional
   if (isProfessional) {
     if (isProfileComplete) {
@@ -93,9 +84,12 @@ const RootRedirect = () => {
     return <Navigate to="/professional-signup" replace />;
   }
 
-  // Se é guardião com pets
+  // Se é guardião
   if (hasPets) {
     return <Navigate to="/feed" replace />;
+  } else if (profile.account_type === 'user') {
+    // Se escolheu ser guardião mas não tem pet, vai para criar pet
+    return <Navigate to="/create-pet" replace />;
   }
 
   return <Navigate to="/signup-choice" replace />;
@@ -229,6 +223,15 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <PetHealth />
+        </ProtectedRoute>
+      }
+    />
+    
+    <Route
+      path="/scan-health"
+      element={
+        <ProtectedRoute>
+          <ScanHealth />
         </ProtectedRoute>
       }
     />

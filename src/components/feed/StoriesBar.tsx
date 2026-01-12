@@ -5,7 +5,6 @@ import { usePet } from "@/contexts/PetContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -121,9 +120,9 @@ export const StoriesBar = () => {
     return (
       <div className="flex gap-4 overflow-hidden p-4 bg-background border-b border-border">
         {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="flex flex-col items-center gap-2 min-w-[72px]">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <Skeleton className="h-2 w-12" />
+          <div key={i} className="flex flex-col items-center gap-2 min-w-[64px] md:min-w-[72px]">
+            <Skeleton className="h-14 w-14 md:h-16 md:w-16 rounded-full" />
+            <Skeleton className="h-2 w-10 md:w-12" />
           </div>
         ))}
       </div>
@@ -131,7 +130,7 @@ export const StoriesBar = () => {
   }
 
   return (
-    <div className="relative group bg-background border-b border-border py-4">
+    <div className="relative group bg-background border-b border-border py-3 md:py-4">
       <Button
         variant="ghost"
         size="icon"
@@ -143,16 +142,16 @@ export const StoriesBar = () => {
 
       <div
         id="stories-container"
-        className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth px-4"
+        className="flex gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth px-4"
       >
         {/* Botão de Criar Story (Apenas para Guardiões) */}
         {!profile?.account_type || profile.account_type === 'user' ? (
-          <Link to="/create-story" className="flex flex-col items-center gap-1.5 min-w-[72px]">
+          <Link to="/create-story" className="flex flex-col items-center gap-1.5 min-w-[64px] md:min-w-[72px]">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full p-[2px] bg-muted flex items-center justify-center">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full p-[2px] bg-muted flex items-center justify-center">
                 <Avatar className="w-full h-full border-2 border-background">
                   <AvatarImage src={currentPet?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-muted text-muted-foreground">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                     {currentPet?.name?.[0] || "?"}
                   </AvatarFallback>
                 </Avatar>
@@ -161,7 +160,7 @@ export const StoriesBar = () => {
                 <Plus className="h-3 w-3" />
               </div>
             </div>
-            <span className="text-[11px] text-muted-foreground font-medium">Seu story</span>
+            <span className="text-[10px] md:text-[11px] text-muted-foreground font-medium">Seu story</span>
           </Link>
         ) : null}
 
@@ -169,21 +168,21 @@ export const StoriesBar = () => {
           <Link
             key={story.id}
             to={`/story/${story.id}`}
-            className="flex flex-col items-center gap-1.5 min-w-[72px] transition-transform active:scale-95"
+            className="flex flex-col items-center gap-1.5 min-w-[64px] md:min-w-[72px] transition-transform active:scale-95"
           >
             <div className={cn(
-              "w-16 h-16 rounded-full p-[2px]",
+              "w-14 h-14 md:w-16 md:h-16 rounded-full p-[2px]",
               story.hasViewed ? "bg-muted" : "bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600"
             )}>
               <Avatar className="w-full h-full border-2 border-background">
                 <AvatarImage src={story.pet?.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {story.pet?.name?.[0] || "?"}
                 </AvatarFallback>
               </Avatar>
             </div>
             <span className={cn(
-              "text-[11px] text-center truncate w-16 font-medium",
+              "text-[10px] md:text-[11px] text-center truncate w-14 md:w-16 font-medium",
               story.hasViewed ? "text-muted-foreground" : "text-foreground"
             )}>
               {story.pet?.name}

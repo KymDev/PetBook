@@ -36,9 +36,32 @@ export async function getHealthRecords(petId: string): Promise<{ data: HealthRec
  * @returns O registro criado ou um erro.
  */
 export async function createHealthRecord(recordData: HealthRecordInsert): Promise<{ data: HealthRecord | null; error: any }> {
+  // Buscar informações do usuário atual para ver se é profissional
+  const { data: { user } } = await supabase.auth.getUser();
+  let finalData = { ...recordData };
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('full_name, professional_crmv, professional_crmv_state, account_type')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.account_type === 'professional') {
+      finalData.professional_name = profile.full_name;
+      // Se tiver CRMV, anexa ao nome ou em um campo específico se existir
+      if (profile.professional_crmv) {
+        const crmvInfo = ` (CRMV-${profile.professional_crmv_state} ${profile.professional_crmv})`;
+        if (!finalData.professional_name.includes(crmvInfo)) {
+          finalData.professional_name += crmvInfo;
+        }
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('health_records')
-    .insert(recordData)
+    .insert(finalData)
     .select()
     .single();
 
@@ -148,8 +171,19 @@ export async function updateHealthAccessStatus(accessId: string, status: 'grante
     .from('health_access_status')
     .update(updateData)
     .eq('id', accessId)
-    .select()
+    .select('*, pet:pet_id(name)')
     .single();
+
+  if (!error && data && status === 'granted') {
+    // Criar notificação para o profissional informando que o acesso foi concedido
+    await supabase.from('notifications').insert({
+      pet_id: data.pet_id,
+      type: 'health_access_granted',
+      message: `Seu acesso à ficha de saúde de ${data.pet?.name || 'um pet'} foi concedido!`,
+      related_user_id: data.professional_user_id,
+      is_read: false
+    });
+  }
 
   return { data, error };
 }

@@ -59,6 +59,7 @@ export default function ProfessionalSignup() {
   const { updateProfessionalProfile, refreshProfile } = useUserProfile();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    full_name: "",
     professional_service_type: "",
     professional_custom_service_type: "",
     professional_bio: "",
@@ -109,6 +110,11 @@ export default function ProfessionalSignup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.full_name.trim()) {
+      toast.error("Preencha seu nome completo");
+      return;
+    }
 
     if (!formData.professional_service_type) {
       toast.error("Selecione sua profissão");
@@ -195,6 +201,7 @@ export default function ProfessionalSignup() {
       const dbServiceType = serviceTypeMap[formData.professional_service_type] || 'outros';
 
       await updateProfessionalProfile({
+        full_name: formData.full_name,
         professional_latitude: latitude,
         professional_longitude: longitude,
         account_type: "professional",
@@ -276,6 +283,21 @@ export default function ProfessionalSignup() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Nome Completo */}
+                <div className="space-y-2">
+                  <Label htmlFor="full_name" className="flex items-center gap-2 font-semibold">
+                    Nome Completo *
+                  </Label>
+                  <Input
+                    id="full_name"
+                    name="full_name"
+                    placeholder="Seu nome completo ou nome do seu negócio"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
                 {/* Professional Type */}
                 <div className="space-y-4">
                   <div className="space-y-2">

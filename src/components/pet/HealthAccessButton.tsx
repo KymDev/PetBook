@@ -10,6 +10,7 @@ interface HealthAccessButtonProps {
   status: 'none' | 'pending' | 'granted' | 'revoked';
   onStatusChange: (newStatus: 'none' | 'pending' | 'granted' | 'revoked') => void;
   isFollowing: boolean;
+  professionalServiceType?: string;
 }
 
 export function HealthAccessButton({
@@ -18,10 +19,17 @@ export function HealthAccessButton({
   status,
   onStatusChange,
   isFollowing,
+  professionalServiceType,
 }: HealthAccessButtonProps) {
+  const isHealthProfessional = professionalServiceType === 'veterinario';
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRequestAccess = async () => {
+    if (!isHealthProfessional) {
+      toast.error("Apenas profissionais de saúde (veterinários) podem solicitar acesso ao prontuário.");
+      return;
+    }
+
     if (!isFollowing) {
       toast.error("Você precisa seguir o pet para solicitar acesso à ficha de saúde.");
       return;
@@ -72,6 +80,7 @@ export function HealthAccessButton({
         );
       case 'none':
       default:
+        if (!isHealthProfessional) return null;
         return (
           <Button variant="outline" className="gap-2" onClick={handleRequestAccess} disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stethoscope className="h-4 w-4" />}

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserCheck, Heart, Image as ImageIcon, Users } from "lucide-react";
+import { Search, Image as ImageIcon, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -61,7 +61,6 @@ const Explore = () => {
       .limit(100);
 
     if (data) {
-      // Embaralhar os posts localmente para garantir que sejam aleatórios
       const shuffled = [...data].sort(() => Math.random() - 0.5);
       setPosts(shuffled.slice(0, 30) as any);
     }

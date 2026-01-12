@@ -97,8 +97,8 @@ const ServiceProvidersPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container max-w-xl py-6 space-y-6">
-        <h1 className="text-3xl font-bold font-heading">Diretorio de Servicos Pet</h1>
-        <p className="text-muted-foreground">Encontre veterinarios, passeadores, lojas e mais perto de voce.</p>
+        <h1 className="text-3xl font-bold font-heading">Serviços Pet</h1>
+        <p className="text-muted-foreground">Encontre veterinários, passeadores, adestradores e os melhores profissionais para o seu pet perto de você.</p>
 
         {/* Filtros e Busca */}
         <Card className="p-4 shadow-sm">

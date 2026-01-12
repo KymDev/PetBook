@@ -128,6 +128,12 @@ export const PetProvider = ({ children }: { children: ReactNode }) => {
 
   const followPet = async (targetPetId: string) => {
     if (!user) return; // Precisa de um usuário logado
+    
+    // Impede que um pet siga a si mesmo
+    if (currentPet && targetPetId === currentPet.id) {
+      console.warn("Um pet não pode seguir a si mesmo.");
+      return;
+    }
 
     // Profissionais seguem como user_id, Guardiões seguem como pet_id
     const followerId = currentPet ? currentPet.id : user.id;

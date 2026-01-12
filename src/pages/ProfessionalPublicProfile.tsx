@@ -111,6 +111,10 @@ const ProfessionalPublicProfile = () => {
   const serviceType = profile.professional_service_type || 'outros';
   const config = serviceTypeConfig[serviceType] || serviceTypeConfig.outros;
   const Icon = config.icon;
+  
+  const displayLabel = (serviceType === 'outros' && profile.professional_custom_service_type) 
+    ? profile.professional_custom_service_type 
+    : config.label;
 
   return (
     <MainLayout>
@@ -144,7 +148,19 @@ const ProfessionalPublicProfile = () => {
                   {profile.is_professional_verified && <VerifiedBadge size="md" />}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{config.label}</Badge>
+                  <Badge variant="secondary">{displayLabel}</Badge>
+                  {serviceType === 'veterinario' && profile.professional_crmv && (
+                    <a 
+                      href={`https://www.cfmv.gov.br/consulta-ao-cadastro-nacional-de-medicos-veterinarios-e-zootecnistas/`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="cursor-pointer hover:bg-blue-50 border-blue-200 text-blue-600">
+                        CRMV: {profile.professional_crmv}
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Badge>
+                    </a>
+                  )}
                   <div className="flex items-center text-sm text-yellow-500">
                     <Star className="h-4 w-4 fill-yellow-500 mr-1" />
                     <span>4.5</span>

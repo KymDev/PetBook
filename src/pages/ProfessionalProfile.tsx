@@ -97,6 +97,7 @@ const ProfessionalProfile = () => {
   };
 
   const [formData, setFormData] = useState({
+    full_name: profile?.full_name || "",
     professional_bio: profile?.professional_bio || "",
     professional_phone: profile?.professional_phone || "",
     professional_address: profile?.professional_address || "",
@@ -215,6 +216,43 @@ const ProfessionalProfile = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Informações Básicas
+              </CardTitle>
+              <CardDescription>
+                Seu nome e foto de perfil profissional.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <AvatarUpload
+                  currentAvatarUrl={formData.professional_avatar_url}
+                  onUploadSuccess={(newUrl) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      professional_avatar_url: newUrl,
+                    }))
+                  }
+                  bucketPath={`professional_avatars/${profile.id}`}
+                  bucketName="petbook-media"
+                  fallbackText={profile.full_name ? profile.full_name[0] : "P"}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Nome Completo / Nome do Negócio</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={e => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  placeholder="Seu nome profissional"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 Foto de Perfil

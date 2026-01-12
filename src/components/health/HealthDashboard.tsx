@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileDown, ChevronRight, Syringe, FlaskConical, ClipboardList } from "lucide-react";
+import { Loader2, FileDown, ChevronRight, Syringe, FlaskConical, ClipboardList, ChevronLeft, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 import { HealthRecordDetails } from './HealthRecordDetails';
 import { cn } from "@/lib/utils";
+import { useNavigate } from 'react-router-dom';
 
 interface HealthRecord {
   id: string;
@@ -12,6 +13,7 @@ interface HealthRecord {
   title: string;
   record_type: string;
   notes: string;
+  observation?: string;
   version: number;
   professional_name?: string;
   attachment_url?: string;
@@ -24,7 +26,9 @@ interface HealthRecord {
 export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<HealthRecord | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchHealthTimeline();
@@ -53,74 +57,114 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
   };
 
   const generateReport = async () => {
+    setExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('export-health-report', {
-        body: { petId, format: 'json' }
-      });
-      
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      if (data) {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      // Usando fetch direto para ter controle total sobre a requisição e evitar abstrações que podem falhar com CORS
+      const response = await fetch(`${supabaseUrl}/functions/v1/export-health-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || supabaseAnonKey}`,
+          'apikey': supabaseAnonKey
+        },
+        body: JSON.stringify({ petId, format: 'html' })
+      }).catch(err => {
+        console.error("Erro de rede ao chamar a função:", err);
+        throw new Error("Não foi possível conectar ao servidor de exportação. Verifique se a função está publicada.");
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Erro na resposta da função:", errorText);
+        throw new Error('Erro ao gerar relatório no servidor');
+      }
+
+      const htmlContent = await response.text();
+      
+      if (htmlContent) {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `medical_report_${petId}.json`;
-        a.click();
-        toast.success("Relatório exportado com sucesso!");
+        const printWindow = window.open(url, '_blank');
+        
+        if (printWindow) {
+          toast.success("Relatório gerado com sucesso!");
+        } else {
+          toast.error("O bloqueador de pop-ups impediu a abertura do relatório.");
+        }
       }
     } catch (error: any) {
       console.error("Erro ao exportar relatório:", error);
-      toast.error("Erro ao exportar relatório médico");
+      toast.error(error.message || "Erro ao exportar relatório médico");
+    } finally {
+      setExporting(false);
     }
   };
 
   const getRecordIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'vacina': return <Syringe size={18} className="text-blue-500" />;
-      case 'exame': return <FlaskConical size={18} className="text-purple-500" />;
+      case 'vacina': return <Syringe size={18} className="text-emerald-500" />;
+      case 'exame': return <FlaskConical size={18} className="text-blue-500" />;
+      case 'consulta': return <HeartPulse size={18} className="text-rose-500" />;
       default: return <ClipboardList size={18} className="text-primary" />;
     }
   };
 
   const getRecordBadgeClass = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'vacina': return "bg-blue-50 text-blue-700 border-blue-100";
-      case 'exame': return "bg-purple-50 text-purple-700 border-purple-100";
+      case 'vacina': return "bg-emerald-50 text-emerald-700 border-emerald-100";
+      case 'exame': return "bg-blue-50 text-blue-700 border-blue-100";
+      case 'consulta': return "bg-rose-50 text-rose-700 border-rose-100";
       default: return "bg-primary/5 text-primary border-primary/10";
     }
   };
 
   if (selectedRecord) {
     return (
-      <div className="p-6 bg-card rounded-2xl shadow-sm border animate-in fade-in zoom-in-95 duration-200">
-        <HealthRecordDetails 
-          record={selectedRecord} 
-          onClose={() => setSelectedRecord(null)} 
-          onDelete={fetchHealthTimeline}
-        />
+      <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        <Button 
+          variant="ghost" 
+          onClick={() => setSelectedRecord(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2"
+        >
+          <ChevronLeft size={20} />
+          Voltar para a lista
+        </Button>
+        <div className="p-6 bg-card rounded-2xl shadow-sm border">
+          <HealthRecordDetails 
+            record={selectedRecord} 
+            onClose={() => setSelectedRecord(null)} 
+            onDelete={fetchHealthTimeline}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-card rounded-2xl shadow-sm border">
+    <div className="p-4 md:p-6 bg-card rounded-2xl shadow-sm border">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Prontuário de Saúde</h2>
-          <p className="text-sm text-muted-foreground">Histórico completo de vacinas e exames</p>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(-1)}
+            className="rounded-full sm:hidden"
+          >
+            <ChevronLeft size={24} />
+          </Button>
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold text-foreground">Prontuário de Saúde</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">Histórico completo de vacinas e exames</p>
+          </div>
         </div>
-        <Button 
-          onClick={generateReport}
-          variant="outline"
-          className="gap-2 rounded-xl border-primary/20 hover:bg-primary/5 text-primary"
-        >
-          <FileDown size={18} />
-          Exportar PDF
-        </Button>
+{/* Botão de exportar removido conforme solicitado */}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
@@ -134,36 +178,40 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
           <div 
             key={record.id} 
             onClick={() => setSelectedRecord(record)}
-            className="group relative flex items-center gap-4 p-4 bg-muted/30 rounded-2xl hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-primary/10"
+            className="group relative flex items-center gap-3 p-3 md:p-4 bg-muted/30 rounded-2xl hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-primary/10"
           >
-            <div className={cn("p-3 rounded-xl border", getRecordBadgeClass(record.record_type))}>
+            <div className={cn("p-2.5 md:p-3 rounded-xl border shrink-0", getRecordBadgeClass(record.record_type))}>
               {getRecordIcon(record.record_type)}
             </div>
             
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start mb-1">
-                <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border", getRecordBadgeClass(record.record_type))}>
+                <span className={cn("text-[8px] md:text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border", getRecordBadgeClass(record.record_type))}>
                   {record.record_type}
                 </span>
-                <span className="text-[10px] font-medium text-muted-foreground bg-background px-2 py-0.5 rounded-full border">
-                  v{record.version}
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {new Date(record.record_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                 </span>
               </div>
-              <h3 className="font-bold text-base text-foreground truncate group-hover:text-primary transition-colors">
+              <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
                 {record.health_standards_vaccines?.name || record.health_standards_exams?.name || record.title}
               </h3>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                <span>{new Date(record.record_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+              
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 {record.professional_name && (
-                  <>
-                    <span>•</span>
-                    <span className="truncate">Dr(a). {record.professional_name}</span>
-                  </>
+                  <p className="text-[10px] md:text-[11px] text-muted-foreground flex items-center gap-1">
+                    <span className="font-semibold">Vet:</span> {record.professional_name.split(' ')[0]}
+                  </p>
+                )}
+                {(record.notes || record.observation) && (
+                  <p className="text-[10px] md:text-[11px] text-muted-foreground truncate max-w-[120px] md:max-w-[150px]">
+                    <span className="font-semibold">Obs:</span> {record.notes || record.observation}
+                  </p>
                 )}
               </div>
             </div>
             
-            <ChevronRight size={18} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            <ChevronRight size={16} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
           </div>
         ))}
       </div>

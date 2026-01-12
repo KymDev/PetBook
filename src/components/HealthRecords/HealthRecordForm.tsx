@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Info, Scale, AlertTriangle, Pill } from 'lucide-react';
+import { CalendarIcon, Info, Scale, AlertTriangle, Pill, Search, Syringe, FlaskConical, Stethoscope, ClipboardList, Scissors, Thermometer } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Database } from '@/integrations/supabase/types';
@@ -45,7 +45,6 @@ const healthRecordSchema = z.object({
   }),
   observation: z.string().max(1000).optional(),
   attachment_url: z.string().url({ message: 'URL de anexo inválida.' }).optional().or(z.literal('')),
-  // Novos campos para anotações contextuais
   weight: z.string().optional(),
   medication_name: z.string().optional(),
   allergy_description: z.string().optional(),
@@ -68,8 +67,9 @@ interface HealthRecordFormProps {
 const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData, onSuccess, onClose, isProfessionalSubmission, professionalId }) => {
   const isEdit = !!initialData;
   const { profile } = useAuth();
+  const [standards, setStandards] = useState<any[]>([]);
+  const [isLoadingStandards, setIsLoadingStandards] = useState(false);
   
-  // Determinar o nome padrão do profissional
   const defaultProfessionalName = initialData?.professional_name || 
                                  (profile?.account_type === 'professional' ? profile?.full_name : '') || 
                                  '';
@@ -93,10 +93,30 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
 
   const watchType = form.watch('record_type');
 
+  useEffect(() => {
+    if (watchType === 'vacina' || watchType === 'exame') {
+      fetchStandards();
+    } else {
+      setStandards([]);
+    }
+  }, [watchType]);
+
+  const fetchStandards = async () => {
+    setIsLoadingStandards(true);
+    try {
+      const table = watchType === 'vacina' ? 'health_standards_vaccines' : 'health_standards_exams';
+      const { data, error } = await supabase.from(table).select('*').order('name');
+      if (error) throw error;
+      setStandards(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar padrões:", error);
+    } finally {
+      setIsLoadingStandards(false);
+    }
+  };
+
   const onSubmit = async (values: HealthRecordFormValues) => {
     let result;
-    
-    // Construir a observação final incluindo os novos campos se preenchidos
     let finalObservation = values.observation || '';
     
     if (values.record_type === 'peso' && values.weight) {
@@ -108,7 +128,6 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
     }
 
     if (isProfessionalSubmission && professionalId) {
-      // Submissão de Profissional (Registro Pendente)
       const followUpText = values.follow_up_notes ? `\n\n[Acompanhamento Profissional]: ${values.follow_up_notes}` : '';
       
       const pendingRecordData: PendingHealthRecordInsert = {
@@ -135,7 +154,6 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
       return;
 
     } else {
-      // Submissão de Guardião (Registro Direto)
       const recordData: HealthRecordInsert = {
         pet_id: petId,
         title: values.title,
@@ -172,16 +190,18 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
   };
 
   const recordTypes = [
-    { value: 'vacina', label: 'Vacina' },
-    { value: 'consulta', label: 'Consulta Veterinária' },
-    { value: 'exame', label: 'Exame' },
-    { value: 'check_up', label: 'Check-up' },
-    { value: 'medicamento', label: 'Medicamento' },
-    { value: 'cirurgia', label: 'Cirurgia' },
-    { value: 'alergia', label: 'Alergia' },
-    { value: 'peso', label: 'Peso' },
-    { value: 'sintoma', label: 'Sintoma' },
+    { value: 'vacina', label: 'Vacina', icon: Syringe, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+    { value: 'consulta', label: 'Consulta Veterinária', icon: Stethoscope, color: 'text-green-600', bgColor: 'bg-green-50' },
+    { value: 'exame', label: 'Exame', icon: FlaskConical, color: 'text-red-600', bgColor: 'bg-red-50' },
+    { value: 'check_up', label: 'Check-up', icon: ClipboardList, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+    { value: 'medicamento', label: 'Medicamento', icon: Pill, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+    { value: 'cirurgia', label: 'Cirurgia', icon: Scissors, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+    { value: 'alergia', label: 'Alergia', icon: AlertTriangle, color: 'text-red-700', bgColor: 'bg-red-100' },
+    { value: 'peso', label: 'Peso', icon: Scale, color: 'text-teal-600', bgColor: 'bg-teal-50' },
+    { value: 'sintoma', label: 'Sintoma', icon: Thermometer, color: 'text-amber-700', bgColor: 'bg-amber-50' },
   ];
+
+  const currentTypeInfo = recordTypes.find(t => t.value === watchType) || recordTypes[0];
 
   return (
     <Form {...form}>
@@ -195,6 +215,17 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
           </div>
         )}
 
+        {/* Cabeçalho de Contexto Visual */}
+        <div className={cn("p-4 rounded-xl border flex items-center gap-4 transition-colors duration-300", currentTypeInfo.bgColor, "border-" + currentTypeInfo.color.split('-')[1] + "-200")}>
+          <div className={cn("p-3 rounded-full bg-white shadow-sm", currentTypeInfo.color)}>
+            <currentTypeInfo.icon size={24} />
+          </div>
+          <div>
+            <h3 className={cn("font-bold text-lg", currentTypeInfo.color)}>{currentTypeInfo.label}</h3>
+            <p className="text-xs text-muted-foreground">Preencha os detalhes do procedimento abaixo</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -204,14 +235,17 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
                 <FormLabel>Tipo de Registro</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {recordTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                        <div className="flex items-center gap-2">
+                          <type.icon size={14} className={type.color} />
+                          {type.label}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -233,7 +267,7 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
                       <Button
                         variant={'outline'}
                         className={cn(
-                          'w-full justify-start text-left font-normal',
+                          'w-full h-11 justify-start text-left font-normal',
                           !field.value && 'text-muted-foreground'
                         )}
                       >
@@ -264,30 +298,84 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
           render={({ field }) => (
             <FormItem>
               <FormLabel>Título / Nome do Procedimento</FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input className="h-11" placeholder={`Ex: ${watchType === 'vacina' ? 'Vacina V10' : watchType === 'exame' ? 'Hemograma' : 'Consulta de Rotina'}`} {...field} />
+                </FormControl>
+                {(watchType === 'vacina' || watchType === 'exame') && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="icon" type="button" className="h-11 w-11 shrink-0" title="Sugestões">
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0" align="end">
+                      <div className={cn("p-2 border-b", currentTypeInfo.bgColor)}>
+                        <p className={cn("text-xs font-bold uppercase tracking-wider", currentTypeInfo.color)}>Sugestões de {watchType === 'vacina' ? 'Vacinas' : 'Exames'}</p>
+                      </div>
+                      <div className="max-h-[250px] overflow-y-auto p-1">
+                        {isLoadingStandards ? (
+                          <div className="p-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                            <div className="h-3 w-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            Carregando...
+                          </div>
+                        ) : standards.length > 0 ? (
+                          standards.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent rounded-md transition-colors flex items-center justify-between group"
+                              onClick={() => {
+                                form.setValue('title', s.name);
+                              }}
+                            >
+                              <span>{s.name}</span>
+                              <Plus size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-xs text-muted-foreground">Nenhuma sugestão encontrada.</div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+              <FormDescription>
+                Digite o nome ou use o botão de busca para ver opções comuns.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="professional_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Profissional Responsável</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Vacina V10, Hemograma, Consulta de Rotina" {...field} />
+                <Input className="h-11" placeholder="Nome do veterinário ou clínica" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* Campos Dinâmicos baseados no tipo */}
         {watchType === 'peso' && (
           <FormField
             control={form.control}
             name="weight"
             render={({ field }) => (
-              <FormItem className="bg-teal-50 p-3 rounded-lg border border-teal-100">
-                <FormLabel className="text-teal-700 flex items-center gap-2">
-                  <Scale className="h-4 w-4" /> Peso Atual (kg)
-                </FormLabel>
+              <FormItem>
+                <FormLabel>Peso (kg)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.1" placeholder="Ex: 12.5" {...field} />
+                  <div className="relative">
+                    <Scale className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9 h-11" placeholder="Ex: 12.5" {...field} />
+                  </div>
                 </FormControl>
-                <FormDescription className="text-teal-600/70 text-[10px]">
-                  Este valor atualizará o resumo de saúde do pet.
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -299,12 +387,13 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
             control={form.control}
             name="medication_name"
             render={({ field }) => (
-              <FormItem className="bg-purple-50 p-3 rounded-lg border border-purple-100">
-                <FormLabel className="text-purple-700 flex items-center gap-2">
-                  <Pill className="h-4 w-4" /> Nome do Medicamento
-                </FormLabel>
+              <FormItem>
+                <FormLabel>Nome do Medicamento</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Apoquel 5.4mg" {...field} />
+                  <div className="relative">
+                    <Pill className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9 h-11" placeholder="Ex: Apoquel 5.4mg" {...field} />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -317,133 +406,122 @@ const HealthRecordForm: React.FC<HealthRecordFormProps> = ({ petId, initialData,
             control={form.control}
             name="allergy_description"
             render={({ field }) => (
-              <FormItem className="bg-red-50 p-3 rounded-lg border border-red-100">
-                <FormLabel className="text-red-700 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" /> Descrição da Alergia
-                </FormLabel>
+              <FormItem>
+                <FormLabel>Descrição da Alergia</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Alergia a frango, Picada de abelha" {...field} />
+                  <div className="relative">
+                    <AlertTriangle className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <Input className="pl-9 h-11" placeholder="Ex: Alergia a picada de pulga" {...field} />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         )}
-
-        <FormField
-          control={form.control}
-          name="professional_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Profissional / Clínica Responsável</FormLabel>
-              <FormControl>
-                <Input placeholder="Nome do Veterinário ou Clínica" {...field} />
-              </FormControl>
-              <FormDescription className="text-[10px]">
-                Deixe em branco se for um registro feito por você (guardião).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}
           name="observation"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Observações Adicionais</FormLabel>
+              <FormLabel>Observações / Notas</FormLabel>
               <FormControl>
-                <Textarea placeholder="Detalhes importantes, recomendações ou diagnóstico..." {...field} />
+                <Textarea 
+                  placeholder="Detalhes adicionais sobre o procedimento..." 
+                  className="resize-none min-h-[100px]" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {isProfessionalSubmission && (
-          <FormField
-            control={form.control}
-            name="follow_up_notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-blue-600">Anotações de Acompanhamento (Para o Tutor)</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="O que o tutor deve acompanhar? (Ex: observar febre, apetite, repouso)" 
-                    className="border-blue-200 focus-visible:ring-blue-500"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
-          <div className="space-y-0.5">
-            <FormLabel>Definir Lembrete</FormLabel>
-            <p className="text-[10px] text-muted-foreground">Notificar sobre este registro no futuro</p>
-          </div>
-          <FormField
-            control={form.control}
-            name="set_reminder"
-            render={({ field }) => (
+        <FormField
+          control={form.control}
+          name="attachment_url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Link do Anexo (Opcional)</FormLabel>
               <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
+                <Input className="h-11" placeholder="https://..." {...field} />
               </FormControl>
-            )}
-          />
+              <FormDescription>Link para PDF de exame ou foto da receita.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex flex-col gap-4 pt-2">
+          <div className="flex items-center justify-between rounded-xl border p-4 shadow-sm bg-muted/20">
+            <div className="space-y-0.5">
+              <FormLabel className="text-base">Definir Lembrete</FormLabel>
+              <FormDescription>
+                Receber uma notificação para este registro no futuro.
+              </FormDescription>
+            </div>
+            <FormField
+              control={form.control}
+              name="set_reminder"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {form.watch('set_reminder') && (
+            <FormField
+              control={form.control}
+              name="reminder_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col animate-in fade-in slide-in-from-top-2 duration-300">
+                  <FormLabel className="mb-2">Data do Lembrete</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'w-full h-11 justify-start text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Selecione uma data</span>}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
-        {form.watch('set_reminder') && (
-          <FormField
-            control={form.control}
-            name="reminder_date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col animate-in fade-in slide-in-from-top-2">
-                <FormLabel>Data do Lembrete</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={'outline'}
-                        className={cn(
-                          'w-full justify-start text-left font-normal',
-                          !field.value && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Selecione a data do lembrete</span>}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        <div className="flex gap-3 pt-4">
-          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+        <div className="flex justify-end gap-3 pt-6">
+          <Button type="button" variant="outline" className="h-12 px-6 rounded-xl" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" className="flex-1 gradient-bg" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Salvando...' : (isEdit ? 'Atualizar' : 'Salvar Registro')}
+          <Button type="submit" className={cn("h-12 px-8 rounded-xl font-bold shadow-md transition-all", currentTypeInfo.color.replace('text', 'bg'), "hover:opacity-90 text-white")}>
+            {isEdit ? 'Atualizar Registro' : 'Salvar Registro'}
           </Button>
         </div>
       </form>
