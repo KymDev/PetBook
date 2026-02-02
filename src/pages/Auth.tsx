@@ -16,13 +16,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
-
-const authSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-});
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const Auth = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
@@ -31,9 +29,13 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Evita quebrar o React Router chamando navigate direto no render
+  const authSchema = z.object({
+    email: z.string().email(t("auth.email_invalid") || "Email inválido"),
+    password: z.string().min(6, t("auth.password_min") || "A senha deve ter pelo menos 6 caracteres"),
+  });
+
   useEffect(() => {
-    if (user) navigate("/", { replace: true }); // CORREÇÃO AQUI
+    if (user) navigate("/", { replace: true });
   }, [user, navigate]);
 
   const handleSubmit = async (type: "login" | "signup") => {
@@ -41,7 +43,7 @@ const Auth = () => {
 
     if (!validation.success) {
       toast({
-        title: "Erro de validação",
+        title: t("auth.error_validation"),
         description: validation.error.errors[0].message,
         variant: "destructive",
       });
@@ -57,8 +59,8 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("already registered")) {
             toast({
-              title: "Email já cadastrado",
-              description: "Este email já está em uso. Tente fazer login.",
+              title: t("auth.email_already_registered") || "Email já cadastrado",
+              description: t("auth.email_already_registered_desc") || "Este email já está em uso. Tente fazer login.",
               variant: "destructive",
             });
           } else {
@@ -66,9 +68,8 @@ const Auth = () => {
           }
         } else {
           toast({
-            title: "Conta criada!",
-            description:
-              "Verifique seu e-mail para confirmar sua conta antes de continuar.",
+            title: t("auth.account_created"),
+            description: t("auth.account_created_desc"),
           });
           navigate("/auth/confirm");
         }
@@ -77,19 +78,18 @@ const Auth = () => {
 
         if (error) {
           toast({
-            title: "Erro ao entrar",
-            description: "Email ou senha incorretos.",
+            title: t("auth.error_login"),
+            description: t("auth.error_login_desc"),
             variant: "destructive",
           });
         } else {
-          // Redireciona para a raiz para que o RootRedirect decida o destino com base no perfil
           navigate("/", { replace: true });
         }
       }
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.message || "Algo deu errado. Tente novamente.",
+        title: t("common.error"),
+        description: error.message || t("common.something_went_wrong"),
         variant: "destructive",
       });
     } finally {
@@ -98,14 +98,17 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
+    <div className="min-h-screen gradient-hero flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <div className="w-full max-w-md space-y-8 animate-slide-up">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <PetBookLogo size="lg" />
           </div>
           <p className="text-muted-foreground">
-            Conecte seu pet com amigos de todo o mundo
+            {t("auth.welcome")}
           </p>
         </div>
 
@@ -113,35 +116,35 @@ const Auth = () => {
           <Tabs defaultValue="login" className="w-full">
             <CardHeader className="pb-2">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar conta</TabsTrigger>
+                <TabsTrigger value="login">{t("auth.login")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.signup")}</TabsTrigger>
               </TabsList>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <TabsContent value="login">
-                <CardTitle className="text-xl">Bem-vindo de volta!</CardTitle>
+                <CardTitle className="text-xl">{t("auth.welcome_back")}</CardTitle>
                 <CardDescription>
-                  Entre com sua conta para acessar o PetBook
+                  {t("auth.login_description")}
                 </CardDescription>
               </TabsContent>
 
               <TabsContent value="signup">
-                <CardTitle className="text-xl">Crie sua conta</CardTitle>
+                <CardTitle className="text-xl">{t("auth.signup_title")}</CardTitle>
                 <CardDescription>
-                  Cadastre-se para começar a usar o PetBook
+                  {t("auth.signup_description")}
                 </CardDescription>
               </TabsContent>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("auth.email")}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="seu@email.com"
+                      placeholder={t("auth.email_placeholder")}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
@@ -151,7 +154,7 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -180,7 +183,7 @@ const Auth = () => {
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
-                        Entrar <ArrowRight className="h-4 w-4" />
+                        {t("auth.login")} <ArrowRight className="h-4 w-4" />
                       </>
                     )}
                   </Button>
@@ -197,7 +200,7 @@ const Auth = () => {
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
-                        Criar conta <ArrowRight className="h-4 w-4" />
+                        {t("auth.signup")} <ArrowRight className="h-4 w-4" />
                       </>
                     )}
                   </Button>

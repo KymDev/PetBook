@@ -4,8 +4,10 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePet } from "@/contexts/PetContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { myPets, loading: petLoading } = usePet();
@@ -35,7 +37,7 @@ const Index = () => {
     }
   }, [user, profile, myPets, authLoading, petLoading, profileLoading, navigate]);
 
-  return <LoadingScreen message="Redirecionando..." />;
+  return <LoadingScreen message={t("common.redirecting")} />;
 };
 
 export default Index;

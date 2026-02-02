@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { HealthSection } from "@/components/health/HealthSection";
-import { EmergencyCard } from "@/components/health/EmergencyCard";
+// EmergencyCard removido conforme solicitado
 import { EmergencyButton } from "@/components/health/EmergencyButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,8 +128,7 @@ const PetHealth = () => {
           </div>
         )}
 
-        <div className="mb-8 space-y-4">
-          <EmergencyCard petId={petId!} />
+        <div className="mb-8">
           {isGuardian && <EmergencyButton petId={petId!} />}
         </div>
         <HealthSection petId={petId!} />

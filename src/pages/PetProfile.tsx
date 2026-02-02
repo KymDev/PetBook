@@ -18,6 +18,7 @@ import { Heart, PawPrint, Cookie, ExternalLink, UserPlus, UserMinus, MessageCirc
 import { Badge } from "@/components/ui/badge";
 import { GuardianPetHeader } from "@/components/layout/GuardianPetHeader";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface Post {
   id: string;
@@ -29,6 +30,7 @@ interface Post {
 }
 
 const PetProfile = () => {
+  const { t } = useTranslation();
   const { petId } = useParams<{ petId: string }>();
   const { user } = useAuth();
   const { currentPet, myPets, selectPet, followPet, unfollowPet, isProfessionalFollowing } = usePet();
@@ -166,7 +168,7 @@ const PetProfile = () => {
           await supabase.from("notifications").insert({
             pet_id: pet.id,
             type: "follow",
-            message: `${currentPet.name} começou a seguir você!`,
+            message: `${currentPet.name} ${t("profile.started_following")}`,
             related_pet_id: currentPet.id,
             is_read: false,
           });
@@ -174,7 +176,7 @@ const PetProfile = () => {
           await supabase.from("notifications").insert({
             pet_id: pet.id,
             type: "follow",
-            message: `${profile?.full_name || "Um Profissional"} começou a seguir você!`,
+            message: `${profile?.full_name || t("common.professional")} ${t("profile.started_following")}`,
             related_user_id: user.id,
             is_read: false,
           });
@@ -183,8 +185,8 @@ const PetProfile = () => {
     } catch (error) {
       console.error("Erro ao seguir/deixar de seguir:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível completar a ação. Tente novamente.",
+        title: t("common.error"),
+        description: t("common.action_error"),
         variant: "destructive",
       });
     }
@@ -194,9 +196,9 @@ const PetProfile = () => {
     if (!currentPet || !pet) return;
 
     const messages = {
-      abraco: `${currentPet.name} enviou um abraço! ❤️`,
-      patinha: `${currentPet.name} enviou uma patinha! 🐾`,
-      petisco: `${currentPet.name} enviou um petisco! 🍪`,
+      abraco: `${currentPet.name} ${t("profile.sent_hug")} ❤️`,
+      patinha: `${currentPet.name} ${t("profile.sent_paw")} 🐾`,
+      petisco: `${currentPet.name} ${t("profile.sent_treat")} 🍪`,
     };
 
     await supabase.from("notifications").insert({
@@ -207,7 +209,7 @@ const PetProfile = () => {
       is_read: false,
     });
 
-    toast({ title: "Enviado!", description: messages[type] });
+    toast({ title: t("common.sent"), description: messages[type] });
   };
 
   if (loading) {
@@ -233,7 +235,7 @@ const PetProfile = () => {
           <Card className="card-elevated border-0">
             <CardContent className="p-6 text-center">
               <PawPrint className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">Pet não encontrado</p>
+              <p className="text-muted-foreground">{t("profile.pet_not_found")}</p>
             </CardContent>
           </Card>
         </div>
@@ -271,7 +273,7 @@ const PetProfile = () => {
                   {isFamily && (
                     <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white border-none">
                       <Users className="h-3 w-3 mr-1" />
-                      Família
+                      {t("profile.family")}
                     </Badge>
                   )}
                 </div>
@@ -281,7 +283,7 @@ const PetProfile = () => {
                   ))}
                 </div>
                 <p className="text-muted-foreground">
-                  {pet.species} • {pet.breed} • {pet.age} anos
+                  {pet.species} • {pet.breed} • {pet.age} {t("profile.years")}
                 </p>
                 {pet.bio && <p className="text-sm">{pet.bio}</p>}
               </div>
@@ -290,170 +292,133 @@ const PetProfile = () => {
               <div className="flex justify-center gap-8 mt-4 py-4 border-y border-border">
                 <div className="text-center">
                   <p className="text-xl font-bold">{posts.length}</p>
-                  <p className="text-xs text-muted-foreground">Posts</p>
+                  <p className="text-xs text-muted-foreground">{t("profile.posts")}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-bold">{followersCount}</p>
-                  <p className="text-xs text-muted-foreground">Seguidores</p>
+                  <p className="text-xs text-muted-foreground">{t("profile.followers")}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-bold">{followingCount}</p>
-                  <p className="text-xs text-muted-foreground">Seguindo</p>
+                  <p className="text-xs text-muted-foreground">{t("profile.following")}</p>
                 </div>
               </div>
 
-              {/* Ações */}
-              <div className="flex flex-wrap justify-center gap-3 mt-6">
-                {isFamily ? (
-                  <>
-                    <Button onClick={() => navigate(`/pet/${petId}/health`)} className="gap-2 gradient-bg">
-                      <ClipboardList className="h-4 w-4" />
-                      Prontuário de Saúde
+              {/* Actions */}
+              <div className="flex flex-col gap-3 mt-6">
+                {!isOwnPet && (
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1 rounded-xl font-bold" 
+                      variant={isFollowing ? "outline" : "default"}
+                      onClick={handleFollow}
+                    >
+                      {isFollowing ? (
+                        <><UserMinus className="h-4 w-4 mr-2" /> {t("profile.unfollow")}</>
+                      ) : (
+                        <><UserPlus className="h-4 w-4 mr-2" /> {t("profile.follow")}</>
+                      )}
                     </Button>
-                    <Button variant="outline" onClick={() => navigate(`/edit-pet/${petId}`)} className="gap-2">
-                      <Settings className="h-4 w-4" />
-                      Configurações
+                    <Button variant="outline" className="rounded-xl" size="icon">
+                      <MessageCircle className="h-4 w-4" />
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    {(currentPet || isProfessional) && (
-                      <Button
-                        onClick={handleFollow}
-                        variant={isFollowing ? "outline" : "default"}
-                        className={!isFollowing ? "gradient-bg" : ""}
-                      >
-                        {isFollowing ? (
-                          <>
-                            <UserMinus className="h-4 w-4 mr-2" />
-                            Deixar de seguir
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Seguir
-                          </>
-                        )}
-                      </Button>
-                    )}
+                  </div>
+                )}
 
-                    {(currentPet || isProfessional) && (
-                      <Link to={isProfessional ? `/chat/professional/${pet.user_id}` : `/chat/${pet.id}`}>
-                        <Button variant="outline" className="gap-2">
-                          <MessageCircle className="h-4 w-4" /> Chat
-                        </Button>
-                      </Link>
-                    )}
+                {isOwnPet && (
+                  <Button asChild variant="outline" className="w-full rounded-xl font-bold">
+                    <Link to={`/pet/${pet.id}/edit`}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      {t("profile.edit_profile")}
+                    </Link>
+                  </Button>
+                )}
 
-                    {currentPet && !isFamily && !isProfessional && (
-                      <>
-                        <Button variant="outline" onClick={() => handleInteraction("abraco")} className="gap-2">
-                          <Heart className="h-4 w-4 text-secondary" /> Abraço
-                        </Button>
-                        <Button variant="outline" onClick={() => handleInteraction("patinha")} className="gap-2">
-                          <PawPrint className="h-4 w-4 text-primary" /> Patinha
-                        </Button>
-                        <Button variant="outline" onClick={() => handleInteraction("petisco")} className="gap-2">
-                          <Cookie className="h-4 w-4 text-amber-500" /> Petisco
-                        </Button>
-                      </>
-                    )}
+                {/* Interações Rápidas */}
+                {!isOwnPet && !isProfessional && (
+                  <div className="flex justify-center gap-4 pt-2">
+                    <Button variant="ghost" size="sm" className="flex-col h-auto gap-1 text-muted-foreground hover:text-red-500" onClick={() => handleInteraction("abraco")}>
+                      <Heart className="h-5 w-5" />
+                      <span className="text-[10px] font-bold uppercase">{t("feed.reactions.abraco")}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-col h-auto gap-1 text-muted-foreground hover:text-primary" onClick={() => handleInteraction("patinha")}>
+                      <PawPrint className="h-5 w-5" />
+                      <span className="text-[10px] font-bold uppercase">{t("feed.reactions.patinha")}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-col h-auto gap-1 text-muted-foreground hover:text-yellow-600" onClick={() => handleInteraction("petisco")}>
+                      <Cookie className="h-5 w-5" />
+                      <span className="text-[10px] font-bold uppercase">{t("feed.reactions.petisco")}</span>
+                    </Button>
+                  </div>
+                )}
 
-                    {guardianProfile?.account_type === 'professional' && guardianProfile?.professional_whatsapp && (
-                      <a 
-                        href={`https://wa.me/${guardianProfile.professional_whatsapp.replace(/\D/g, '' )}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        <Button className="bg-green-500 hover:bg-green-600 text-white gap-2">
-                          <MessageCircle className="h-4 w-4" /> WhatsApp Profissional
-                        </Button>
-                      </a>
-                    )}
-
-                    {isProfessional && user && petId && (
-                      <HealthAccessButton 
-                        petId={petId} 
-                        professionalId={user.id} 
-                        status={healthAccessStatus} 
-                        onStatusChange={setHealthAccessStatus}
-                        isFollowing={isFollowing}
-                        professionalServiceType={profile?.professional_service_type}
-                      />
-                    )}
-                  </>
+                {/* Acesso Profissional à Saúde */}
+                {isProfessional && !isFamily && (
+                  <div className="pt-2">
+                    <HealthAccessButton 
+                      petId={pet.id} 
+                      status={healthAccessStatus} 
+                      accessId={healthAccessId}
+                      onStatusChange={fetchPetProfile}
+                    />
+                  </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Gerenciamento de Pets (Apenas para o Guardião) */}
-          {isFamily && (
-            <Card className="card-elevated border-0 overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <PawPrint className="h-4 w-4 text-primary" />
-                    Meus Pets
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/create-pet')} className="text-primary hover:text-primary/80 gap-1">
-                    <Plus className="h-4 w-4" /> Adicionar
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {myPets.map((myPet) => (
-                    <div 
-                      key={myPet.id}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer",
-                        myPet.id === pet.id ? "bg-primary/5 border-primary/20" : "hover:bg-muted border-transparent"
-                      )}
-                      onClick={() => {
-                        if (myPet.id !== pet.id) {
-                          selectPet(myPet);
-                          navigate(`/pet/${myPet.id}`);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border">
-                          <AvatarImage src={myPet.avatar_url || undefined} />
-                          <AvatarFallback>{myPet.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-bold text-sm">{myPet.name}</p>
-                          <p className="text-xs text-muted-foreground">{myPet.species}</p>
-                        </div>
-                      </div>
-                      {myPet.id === pet.id ? (
-                        <Badge variant="secondary" className="text-[10px]">Atual</Badge>
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        <div className="px-4 md:px-0 space-y-6">
-          {/* Posts */}
-          {posts.length === 0 ? (
+          {/* Guardian Info */}
+          {guardianProfile && (
             <Card className="card-elevated border-0">
-              <CardContent className="py-12 text-center">
-                <PawPrint className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground">Nenhum post ainda</p>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t("profile.guardian")}</p>
+                      <p className="font-bold text-sm">{guardianProfile.full_name}</p>
+                    </div>
+                  </div>
+                  {guardianProfile.professional_whatsapp && (
+                    <Button variant="ghost" size="sm" className="text-primary font-bold gap-1" asChild>
+                      <a href={`https://wa.me/${guardianProfile.professional_whatsapp}`} target="_blank" rel="noopener noreferrer">
+                        WhatsApp <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            <div className="space-y-6">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={{ ...post, pet }} profile={profile} />
-              ))}
-            </div>
           )}
+
+          {/* Posts Feed */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="font-heading font-bold text-lg">{t("profile.posts")}</h2>
+              {isOwnPet && (
+                <Button asChild size="sm" variant="ghost" className="text-primary font-bold gap-1">
+                  <Link to="/create-post">
+                    <Plus className="h-4 w-4" /> {t("feed.create_post")}
+                  </Link>
+                </Button>
+              )}
+            </div>
+            
+            {posts.length === 0 ? (
+              <div className="text-center py-12 bg-muted/30 rounded-2xl border border-dashed">
+                <PawPrint className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">{t("feed.no_posts")}</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={{...post, pet: pet}} profile={profile} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </MainLayout>

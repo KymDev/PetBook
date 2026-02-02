@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet, Pet } from "@/contexts/PetContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
@@ -22,6 +22,7 @@ interface Notification {
   related_pet_id: string | null;
   related_user_id: string | null;
   related_post_id: string | null;
+  pet_id: string | null;
   relatedPet?: Pet;
   relatedUser?: { full_name: string, professional_avatar_url: string | null, account_type: string };
   isFollowingBack?: boolean;
@@ -102,7 +103,7 @@ const Notifications = () => {
             if (n.type === 'follow') {
               isFollowingBack = await checkFollowingStatus({ ...n, related_pet_id: n.related_pet_id });
             }
-          } else if (n.related_user_id) {
+          } else if (n.related_user_id && n.type !== 'message') { 
             const { data: userProfile } = await supabase.from("user_profiles").select("full_name, professional_avatar_url, account_type").eq("id", n.related_user_id).single();
             relatedUser = userProfile;
           }
@@ -110,7 +111,23 @@ const Notifications = () => {
           return { ...n, relatedPet, relatedUser, isFollowingBack };
         })
       );
-      setNotifications(withRelatedData);
+      
+      // Filtro final para remover notificações onde o autor é o próprio usuário
+      const filteredNotifications = withRelatedData.filter(n => {
+        // Se o autor for um pet que pertence ao usuário logado, removemos
+        if (n.relatedPet && n.relatedPet.user_id === user?.id) {
+          return false;
+        }
+        
+        // Se a mensagem começa com o nome do próprio perfil, provavelmente foi gerada por ele
+        if (profile?.full_name && n.message.startsWith(profile.full_name)) {
+          return false;
+        }
+
+        return true;
+      });
+
+      setNotifications(filteredNotifications);
       
       // Mark as read
       let updateQuery = supabase.from("notifications").update({ is_read: true }).eq("is_read", false);
@@ -140,7 +157,6 @@ const Notifications = () => {
         toast({ title: "Seguindo de volta", description: `Agora você segue ${n.relatedPet?.name}!` });
       }
       
-      // Atualiza o estado local
       setNotifications(prev => prev.map(item => 
         item.id === n.id ? { ...item, isFollowingBack: !item.isFollowingBack } : item
       ));
@@ -156,12 +172,18 @@ const Notifications = () => {
   };
 
   const handleNotificationClick = (n: Notification) => {
-    if (n.related_post_id) {
+    if (n.type === 'message') {
+      if (n.related_user_id) {
+        navigate(`/chat/professional/${n.related_user_id}`);
+      } else if (n.related_pet_id) {
+        navigate(`/chat/pet/${n.related_pet_id}`);
+      }
+    } else if (n.related_post_id) {
       if (n.related_pet_id) navigate(`/pet/${n.related_pet_id}`);
     } else if (n.related_pet_id) {
       navigate(`/pet/${n.related_pet_id}`);
     } else if (n.type === 'health_access_request' || n.type === 'health_reminder') {
-      if (currentPet) navigate(`/pets/${currentPet.id}/saude`);
+      if (currentPet) navigate(`/pet/${currentPet.id}/health`);
     } else if (n.type === 'health_access_granted') {
       if (n.related_pet_id) navigate(`/pet/${n.related_pet_id}/health`);
     }

@@ -21,8 +21,13 @@ import {
   Hotel, 
   Award,
   Star,
-  ChevronLeft
+  ChevronLeft,
+  ExternalLink,
+  CalendarPlus
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePet } from "@/contexts/PetContext";
+import { toast } from "sonner";
 
 const serviceTypeConfig: { [key: string]: { label: string, icon: any, color: string, gradient: string } } = {
   veterinario: { 
@@ -72,8 +77,11 @@ const serviceTypeConfig: { [key: string]: { label: string, icon: any, color: str
 const ProfessionalPublicProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { currentPet } = usePet();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -91,6 +99,49 @@ const ProfessionalPublicProfile = () => {
       console.error("Erro ao buscar perfil profissional:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestService = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (!currentPet) {
+      toast.error("Você precisa selecionar um pet para solicitar um serviço.");
+      return;
+    }
+
+    setRequesting(true);
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .insert({
+          pet_id: currentPet.id,
+          professional_id: userId,
+          service_type: profile?.professional_custom_service_type || profile?.professional_service_type || 'Serviço',
+          message: `Olá, gostaria de solicitar um atendimento para o meu pet ${currentPet.name}.`,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      // Criar notificação para o profissional
+      await supabase.from('notifications').insert({
+        related_user_id: userId,
+        type: 'message',
+        message: `${currentPet.name} enviou uma nova solicitação de serviço`,
+        related_pet_id: currentPet.id,
+        is_read: false
+      });
+
+      toast.success("Solicitação enviada com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao solicitar serviço:", error);
+      toast.error("Erro ao enviar solicitação.");
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -169,10 +220,18 @@ const ProfessionalPublicProfile = () => {
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={handleRequestService}
+                  disabled={requesting || user?.id === profile.id}
+                  className="gradient-bg"
+                >
+                  <CalendarPlus className="h-4 w-4 mr-2" />
+                  {requesting ? "Enviando..." : "Solicitar Serviço"}
+                </Button>
                 <Button 
                   onClick={() => navigate(`/chat/professional/${profile.id}`)}
-                  className="gradient-bg"
+                  variant="outline"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Chat

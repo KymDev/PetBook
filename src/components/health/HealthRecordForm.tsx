@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, User, Weight, Calendar, AlertCircle, Pill, ClipboardList, Syringe, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> = ({ petId, onSave }) => {
+  const { t } = useTranslation();
   const [type, setType] = useState('vaccine');
   const [standards, setStandards] = useState<any[]>([]);
   const [selectedStandardId, setSelectedStandardId] = useState('');
@@ -29,8 +31,8 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
     
     if (data) {
       // Colocar "Outros" no topo
-      const others = data.filter(s => s.name.toLowerCase().includes('outros'));
-      const rest = data.filter(s => !s.name.toLowerCase().includes('outros'));
+      const others = data.filter(s => s.name.toLowerCase().includes('outros') || s.name.toLowerCase().includes('others'));
+      const rest = data.filter(s => !s.name.toLowerCase().includes('outros') && !s.name.toLowerCase().includes('others'));
       setStandards([...others, ...rest]);
     } else {
       setStandards([]);
@@ -64,7 +66,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
       
       if (error) throw error;
 
-      toast.success(`${type === 'vaccine' ? 'Vacina' : 'Exame'} salvo com sucesso!`);
+      toast.success(t("health.save_success"));
       onSave();
       setNotes('');
       setAllergies('');
@@ -76,7 +78,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
       setAppetiteLevel('normal');
     } catch (error: any) {
       console.error("Erro ao salvar registro:", error);
-      toast.error("Erro ao salvar registro médico.");
+      toast.error(t("health.save_error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +101,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           )}
         >
           <Syringe size={18} />
-          Vacinação
+          {t("health.vaccination")}
         </button>
         <button 
           type="button"
@@ -110,7 +112,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           )}
         >
           <FlaskConical size={18} />
-          Exames
+          {t("health.exams")}
         </button>
       </div>
 
@@ -120,12 +122,12 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
         </div>
         <div>
           <h4 className={cn("font-bold text-sm", accentColor)}>
-            {type === 'vaccine' ? 'Novo Registro de Vacina' : 'Novo Registro de Exame'}
+            {type === 'vaccine' ? t("health.new_vaccine_record") : t("health.new_exam_record")}
           </h4>
           <p className="text-xs text-muted-foreground mt-0.5">
             {type === 'vaccine' 
-              ? 'Mantenha a imunização do seu pet em dia.' 
-              : 'Registre os resultados de exames para acompanhamento.'}
+              ? t("health.vaccine_tip") 
+              : t("health.exam_tip")}
           </p>
         </div>
       </div>
@@ -135,7 +137,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               <Calendar size={12} />
-              Data
+              {t("health.date")}
             </label>
             <input 
               type="date" 
@@ -149,7 +151,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               {type === 'vaccine' ? <Syringe size={12} /> : <FlaskConical size={12} />}
-              {type === 'vaccine' ? 'Qual Vacina?' : 'Qual Exame?'}
+              {type === 'vaccine' ? t("health.which_vaccine") : t("health.which_exam")}
             </label>
             <select 
               value={selectedStandardId} 
@@ -160,7 +162,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
                 selectedStandardId && standards.find(s => s.id === selectedStandardId)?.name.toLowerCase().includes('outros') && "border-amber-500 ring-1 ring-amber-500/10"
               )}
             >
-              <option value="">Selecione na lista...</option>
+              <option value="">{t("common.select_from_list")}</option>
               {standards.map(s => (
                 <option key={s.id} value={s.id} className={s.name.toLowerCase().includes('outros') ? "font-bold text-amber-600" : ""}>
                   {s.name}
@@ -174,7 +176,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               <Weight size={12} />
-              Peso (kg)
+              {t("health.weight")} (kg)
             </label>
             <input 
               type="number" 
@@ -189,13 +191,13 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               <User size={12} />
-              Veterinário
+              {t("health.professional")}
             </label>
             <input 
               type="text" 
               value={professionalName} 
               onChange={(e) => setProfessionalName(e.target.value)}
-              placeholder="Nome do profissional"
+              placeholder={t("health.professional_placeholder")}
               className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
             />
           </div>
@@ -205,7 +207,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               <AlertCircle size={12} className="text-red-500" />
-              Alergias
+              {t("health.allergies_label")}
             </label>
             <input 
               type="text" 
@@ -219,7 +221,7 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
               <Pill size={12} className="text-blue-500" />
-              Medicamentos
+              {t("health.medications_label")}
             </label>
             <input 
               type="text" 
@@ -234,31 +236,31 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-2xl border border-dashed">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
-              Energia / Disposição
+              {t("health.energy_level")}
             </label>
             <select 
               value={energyLevel} 
               onChange={(e) => setEnergyLevel(e.target.value)}
               className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none"
             >
-              <option value="baixo">Baixa (Apatia)</option>
-              <option value="normal">Normal</option>
-              <option value="alto">Alta (Agitado)</option>
+              <option value="baixo">{t("health.energy_low")}</option>
+              <option value="normal">{t("health.energy_normal")}</option>
+              <option value="alto">{t("health.energy_high")}</option>
             </select>
           </div>
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
-              Apetite
+              {t("health.appetite_level")}
             </label>
             <select 
               value={appetiteLevel} 
               onChange={(e) => setAppetiteLevel(e.target.value)}
               className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none"
             >
-              <option value="baixo">Baixo (Não comeu)</option>
-              <option value="normal">Normal</option>
-              <option value="alto">Alto (Muita fome)</option>
+              <option value="baixo">{t("health.appetite_low")}</option>
+              <option value="normal">{t("health.appetite_normal")}</option>
+              <option value="alto">{t("health.appetite_high")}</option>
             </select>
           </div>
         </div>
@@ -266,14 +268,14 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
         <div className="space-y-2">
           <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2 ml-1">
             <ClipboardList size={12} />
-            Observações / Detalhes
+            {t("health.notes")}
           </label>
           <textarea 
             value={notes} 
             onChange={(e) => setNotes(e.target.value)}
             placeholder={selectedStandardId && standards.find(s => s.id === selectedStandardId)?.name.toLowerCase().includes('outros') 
-              ? "ESPECIFIQUE AQUI: Qual vacina/exame foi feito?" 
-              : "Alguma observação importante?"}
+              ? t("health.specify_here") 
+              : t("health.notes_placeholder")}
             className={cn(
               "flex min-h-[100px] w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none",
               selectedStandardId && standards.find(s => s.id === selectedStandardId)?.name.toLowerCase().includes('outros') && "ring-2 ring-amber-500/40 border-amber-500 bg-amber-50/30"
@@ -290,10 +292,10 @@ export const HealthRecordForm: React.FC<{ petId: string, onSave: () => void }> =
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Salvando...
+              {t("common.saving")}
             </>
           ) : (
-            `Confirmar ${type === 'vaccine' ? 'Vacinação' : 'Exame'}`
+            `${t("common.confirm")} ${type === 'vaccine' ? t("health.vaccination") : t("health.exams")}`
           )}
         </Button>
       </form>

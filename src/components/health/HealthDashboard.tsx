@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { HealthRecordDetails } from './HealthRecordDetails';
 import { cn } from "@/lib/utils";
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from "react-i18next";
 
 interface HealthRecord {
   id: string;
@@ -24,6 +25,7 @@ interface HealthRecord {
 }
 
 export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
+  const { t, i18n } = useTranslation();
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -50,57 +52,9 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
       if (data) setRecords(data as any);
     } catch (error: any) {
       console.error("Erro ao buscar histórico:", error);
-      toast.error("Erro ao carregar histórico de saúde");
+      toast.error(t("health.load_error"));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const generateReport = async () => {
-    setExporting(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      // Usando fetch direto para ter controle total sobre a requisição e evitar abstrações que podem falhar com CORS
-      const response = await fetch(`${supabaseUrl}/functions/v1/export-health-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || supabaseAnonKey}`,
-          'apikey': supabaseAnonKey
-        },
-        body: JSON.stringify({ petId, format: 'html' })
-      }).catch(err => {
-        console.error("Erro de rede ao chamar a função:", err);
-        throw new Error("Não foi possível conectar ao servidor de exportação. Verifique se a função está publicada.");
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Erro na resposta da função:", errorText);
-        throw new Error('Erro ao gerar relatório no servidor');
-      }
-
-      const htmlContent = await response.text();
-      
-      if (htmlContent) {
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = window.URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        
-        if (printWindow) {
-          toast.success("Relatório gerado com sucesso!");
-        } else {
-          toast.error("O bloqueador de pop-ups impediu a abertura do relatório.");
-        }
-      }
-    } catch (error: any) {
-      console.error("Erro ao exportar relatório:", error);
-      toast.error(error.message || "Erro ao exportar relatório médico");
-    } finally {
-      setExporting(false);
     }
   };
 
@@ -122,6 +76,15 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
     }
   };
 
+  const getRecordTypeLabel = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'vacina': return t("health.vaccination");
+      case 'exame': return t("health.exams");
+      case 'consulta': return t("health.consultation");
+      default: return type;
+    }
+  };
+
   if (selectedRecord) {
     return (
       <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -131,7 +94,7 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2"
         >
           <ChevronLeft size={20} />
-          Voltar para a lista
+          {t("common.back_to_list")}
         </Button>
         <div className="p-6 bg-card rounded-2xl shadow-sm border">
           <HealthRecordDetails 
@@ -157,11 +120,10 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
             <ChevronLeft size={24} />
           </Button>
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-foreground">Prontuário de Saúde</h2>
-            <p className="text-xs md:text-sm text-muted-foreground">Histórico completo de vacinas e exames</p>
+            <h2 className="text-xl md:text-2xl font-bold text-foreground">{t("health.title")}</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">{t("health.subtitle")}</p>
           </div>
         </div>
-{/* Botão de exportar removido conforme solicitado */}
       </div>
 
       <div className="space-y-3">
@@ -172,7 +134,7 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
         ) : records.length === 0 ? (
           <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed">
             <ClipboardList className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhum registro encontrado.</p>
+            <p className="text-muted-foreground">{t("common.no_results")}</p>
           </div>
         ) : records.map((record) => (
           <div 
@@ -187,10 +149,10 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start mb-1">
                 <span className={cn("text-[8px] md:text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border", getRecordBadgeClass(record.record_type))}>
-                  {record.record_type}
+                  {getRecordTypeLabel(record.record_type)}
                 </span>
                 <span className="text-[10px] font-medium text-muted-foreground">
-                  {new Date(record.record_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                  {new Date(record.record_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                 </span>
               </div>
               <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
@@ -200,12 +162,12 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 {record.professional_name && (
                   <p className="text-[10px] md:text-[11px] text-muted-foreground flex items-center gap-1">
-                    <span className="font-semibold">Vet:</span> {record.professional_name.split(' ')[0]}
+                    <span className="font-semibold">{t("health.professional_short")}:</span> {record.professional_name.split(' ')[0]}
                   </p>
                 )}
                 {(record.notes || record.observation) && (
                   <p className="text-[10px] md:text-[11px] text-muted-foreground truncate max-w-[120px] md:max-w-[150px]">
-                    <span className="font-semibold">Obs:</span> {record.notes || record.observation}
+                    <span className="font-semibold">{t("common.obs")}:</span> {record.notes || record.observation}
                   </p>
                 )}
               </div>

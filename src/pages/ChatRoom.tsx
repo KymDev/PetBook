@@ -131,13 +131,20 @@ const ChatRoom = () => {
       const { error } = await supabase.from("chat_messages").insert(msgData);
       if (error) throw error;
 
+      // Criar notificação para o destinatário
       await supabase.from("notifications").insert({
+        // Destinatário
         pet_id: otherParty.isProfessional ? null : otherParty.id,
         related_user_id: otherParty.isProfessional ? otherParty.id : null,
+        
         type: "message",
         message: `${isProfessional ? profile?.full_name : currentPet?.name} enviou uma mensagem`,
+        
+        // Autor (quem gerou a notificação)
         related_pet_id: isProfessional ? null : currentPet?.id,
-        related_user_id: isProfessional ? user?.id : null,
+        // Se o autor for profissional, o related_user_id já está sendo usado para o destinatário no schema.
+        // Como o schema é limitado, vamos confiar que o filtro no frontend resolverá.
+        
         is_read: false,
       });
     } catch (error) {

@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, ShieldCheck, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
+  const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -75,9 +77,9 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
 
       if (error) throw error;
       setToken(newToken);
-      toast.success("Novo QR Code gerado com sucesso!");
+      toast.success(t("health.qr_generated"));
     } catch (err) {
-      toast.error("Erro ao gerar QR Code dinâmico");
+      toast.error(t("health.qr_error"));
     } finally {
       setGenerating(false);
     }
@@ -93,7 +95,7 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
       .eq('id', request.professional_id)
       .single();
 
-    const confirmed = window.confirm(`O profissional ${prof?.full_name || 'Veterinário'} deseja acessar a saúde do seu pet. Autorizar?`);
+    const confirmed = window.confirm(`${t("health.access_request_from")} ${prof?.full_name || t("health.veterinarian")}. ${t("health.authorize_access")}`);
     
     if (confirmed) {
       try {
@@ -101,9 +103,9 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
           body: { action: 'approve_access', requestId: request.id }
         });
         if (error) throw error;
-        toast.success("Acesso autorizado!");
+        toast.success(t("health.access_authorized"));
       } catch (err) {
-        toast.error("Erro ao autorizar acesso");
+        toast.error(t("health.authorize_error"));
       }
     } else {
       await supabase
@@ -127,7 +129,7 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
     <div className="flex flex-col items-center p-6 bg-white border-2 border-dashed border-blue-200 rounded-3xl shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <ShieldCheck className="text-blue-600 h-5 w-5" />
-        <h3 className="text-lg font-bold text-gray-800">Acesso Dinâmico Seguro</h3>
+        <h3 className="text-lg font-bold text-gray-800">{t("health.qr_secure")}</h3>
       </div>
       
       <div className="relative bg-white p-4 rounded-2xl shadow-inner border border-gray-100">
@@ -147,7 +149,7 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
       <div className="mt-6 space-y-3 w-full">
         <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100 text-amber-800 text-xs">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>Este código expira em 1 hora. Ao ser escaneado, você receberá uma notificação para autorizar o acesso.</p>
+          <p>{t("health.qr_expiry")}</p>
         </div>
 
         <Button 
@@ -157,7 +159,7 @@ export const HealthQRCode: React.FC<{ petId: string }> = ({ petId }) => {
           className="w-full rounded-xl gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
         >
           <RefreshCw size={16} className={generating ? "animate-spin" : ""} />
-          Atualizar QR Code
+          {t("health.update_qr")}
         </Button>
       </div>
     </div>

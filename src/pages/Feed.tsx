@@ -12,8 +12,10 @@ import { PawPrint, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { useTranslation } from "react-i18next";
 
 const Feed = () => {
+  const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const { currentPet, loading: petLoading } = usePet();
   const { profile, loading: profileLoading } = useUserProfile();
@@ -139,7 +141,7 @@ const Feed = () => {
   };
 
   if (authLoading || petLoading || profileLoading) {
-    return <LoadingScreen message="Carregando seu Pet..." />;
+    return <LoadingScreen message={t("common.loading_pet")} />;
   }
 
   const isProfessional = profile?.account_type === 'professional';
@@ -149,8 +151,6 @@ const Feed = () => {
       <div className="container max-w-xl px-0 md:px-4 py-0 md:py-6 space-y-0 md:space-y-6">
         <StoriesBar />
         <div className="px-4 md:px-0 py-4 md:py-0 space-y-6">
-
-        {/* Card de acesso ao painel profissional removido a pedido do usuário para evitar redundância no feed */}
 
         {loading ? (
           <div className="space-y-4">
@@ -173,13 +173,13 @@ const Feed = () => {
           <Card className="card-elevated border-0">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <PawPrint className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhum post ainda</h3>
-              <p className="text-muted-foreground mb-4">Siga novos pets ou compartilhe algo!</p>
+              <h3 className="text-lg font-semibold mb-2">{t("common.no_posts_yet")}</h3>
+              <p className="text-muted-foreground mb-4">{t("common.follow_new_pets")}</p>
               {!isProfessional && (
                 <Link to="/create-post">
                   <Button className="gradient-bg">
                     <PlusCircle className="h-4 w-4 mr-2" />
-                    Criar Post
+                    {t("common.create_post")}
                   </Button>
                 </Link>
               )}

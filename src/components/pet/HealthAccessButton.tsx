@@ -21,7 +21,7 @@ export function HealthAccessButton({
   isFollowing,
   professionalServiceType,
 }: HealthAccessButtonProps) {
-  const isHealthProfessional = professionalServiceType === 'veterinario';
+  const isHealthProfessional = professionalServiceType === 'veterinario' || professionalServiceType === 'adestrador' || professionalServiceType === 'groomer' || professionalServiceType === 'outros';
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRequestAccess = async () => {
@@ -30,10 +30,13 @@ export function HealthAccessButton({
       return;
     }
 
+    // Removida a obrigatoriedade de seguir para facilitar o fluxo profissional
+    /*
     if (!isFollowing) {
       toast.error("Você precisa seguir o pet para solicitar acesso à ficha de saúde.");
       return;
     }
+    */
 
     setIsLoading(true);
     try {

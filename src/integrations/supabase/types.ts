@@ -159,6 +159,7 @@ export type Database = {
           location: string | null
           contact_phone: string | null
           created_at: string
+          resolved: boolean
         }
         Insert: {
           id?: string
@@ -168,6 +169,7 @@ export type Database = {
           location?: string | null
           contact_phone?: string | null
           created_at?: string
+          resolved?: boolean
         }
         Update: {
           id?: string
@@ -177,6 +179,7 @@ export type Database = {
           location?: string | null
           contact_phone?: string | null
           created_at?: string
+          resolved?: boolean
         }
         Relationships: [
           {

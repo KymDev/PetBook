@@ -5,8 +5,10 @@ import { HealthQRCode } from './HealthQRCode';
 import { HealthRecordForm } from './HealthRecordForm';
 import { QrCode, PlusCircle, History, ClipboardList, FileText } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'timeline' | 'qrcode' | 'add'>('timeline');
 
@@ -22,7 +24,7 @@ export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
           )}
         >
           <ClipboardList size={18} />
-          Prontuário
+          {t("health.records")}
         </button>
         <button 
           onClick={() => setActiveTab('qrcode')}
@@ -32,7 +34,7 @@ export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
           )}
         >
           <QrCode size={18} />
-          QR Code
+          {t("health.qrcode")}
         </button>
         <button 
           onClick={() => setActiveTab('add')}
@@ -42,7 +44,7 @@ export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
           )}
         >
           <PlusCircle size={18} />
-          Novo Registro
+          {t("health.new_record")}
         </button>
         <button 
           onClick={() => {
@@ -52,7 +54,7 @@ export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-muted-foreground hover:text-foreground"
         >
           <FileText size={18} />
-          Ficha de Saúde
+          {t("health.medical_file")}
         </button>
       </div>
 
@@ -63,13 +65,13 @@ export const HealthSection: React.FC<{ petId: string }> = ({ petId }) => {
           <div className="flex flex-col items-center">
             <HealthQRCode petId={petId} />
             <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-sm">
-              <strong>Dica:</strong> Use este QR Code em consultas. O veterinário terá acesso instantâneo ao histórico médico do seu pet sem precisar de login.
+              <strong>{t("common.tip")}:</strong> {t("health.qr_tip")}
             </div>
           </div>
         )}
         {activeTab === 'add' && (
           <div className="bg-card p-6 rounded-2xl shadow-sm border">
-            <h3 className="text-lg font-bold mb-4">Adicionar Registro Médico</h3>
+            <h3 className="text-lg font-bold mb-4">{t("health.add_record")}</h3>
             <HealthRecordForm petId={petId} onSave={() => setActiveTab('timeline')} />
           </div>
         )}

@@ -11,12 +11,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS, es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/contexts/UserProfileContext";
+import { useTranslation } from "react-i18next";
 
 // Usando lucide-react padrão para ícones
-import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, Maximize as MaximizeIcon } from "lucide-react";
+import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, Maximize as MaximizeIcon, PawPrint } from "lucide-react";
 
 interface Post {
   id: string;
@@ -44,18 +45,13 @@ interface Comment {
   user_profile?: { full_name: string, avatar_url: string | null };
 }
 
-const reactionTypes = [
-  { type: "patinha", emoji: "🐾", label: "Patinha" },
-  { type: "abraco", emoji: "❤️", label: "Abraço" },
-  { type: "petisco", emoji: "🍪", label: "Petisco" },
-];
-
 interface PostCardProps {
   post: Post;
   profile: UserProfile | null;
 }
 
 export const PostCard = ({ post, profile }: PostCardProps) => {
+  const { t, i18n } = useTranslation();
   const { currentPet } = usePet();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -68,9 +64,23 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState(post.description || "");
 
+  const reactionTypes = [
+    { type: "patinha", emoji: "🐾", label: t("feed.reactions.patinha") },
+    { type: "abraco", emoji: "❤️", label: t("feed.reactions.abraco") },
+    { type: "petisco", emoji: "🍪", label: t("feed.reactions.petisco") },
+  ];
+
   const isProfessional = profile?.account_type === 'professional';
   const interactorId = isProfessional ? user?.id : currentPet?.id;
   const isMyPost = currentPet?.id === post.pet_id;
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'en': return enUS;
+      case 'es': return es;
+      default: return ptBR;
+    }
+  };
 
   useEffect(() => {
     fetchReactions();
@@ -144,39 +154,51 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   };
 
   const createNotification = async (type: string, message: string) => {
-    if (user?.id === post.pet?.user_id) return;
-
-    const { data: postOwner } = await supabase
+    const { data: postOwner, error: ownerError } = await supabase
       .from("pets")
       .select("user_id")
       .eq("id", post.pet_id)
       .single();
 
-    if (!postOwner) return;
-    if (user?.id === postOwner.user_id) return;
+    if (ownerError || !postOwner) return;
+
+    if (user?.id === postOwner.user_id) {
+      console.log("Auto-interação detectada, ignorando notificação.");
+      return;
+    }
+
+    const { data: ownerProfile } = await supabase
+      .from("user_profiles")
+      .select("account_type")
+      .eq("id", postOwner.user_id)
+      .single();
+
+    const isOwnerProfessional = ownerProfile?.account_type === 'professional';
+
+    const notificationData: any = {
+      type: type,
+      message: message,
+      is_read: false,
+    };
+
+    if (isOwnerProfessional) {
+      notificationData.related_user_id = postOwner.user_id;
+    } else {
+      notificationData.pet_id = post.pet_id;
+    }
 
     if (isProfessional && user) {
-      await supabase.from("notifications").insert({
-        pet_id: post.pet_id,
-        type: type,
-        message: message,
-        related_user_id: user.id,
-        is_read: false,
-      });
+      // Professional author logic
     } else if (currentPet) {
-      await supabase.from("notifications").insert({
-        pet_id: post.pet_id,
-        type: type,
-        message: message,
-        related_pet_id: currentPet.id,
-        is_read: false,
-      });
+      notificationData.related_pet_id = currentPet.id;
     }
+
+    await supabase.from("notifications").insert(notificationData);
   };
 
   const handleReaction = async (type: string) => {
     if (!interactorId) {
-      toast({ title: "Login necessário", description: "Você precisa estar logado ou ter um pet selecionado para reagir.", variant: "destructive" });
+      toast({ title: t("auth.login_required"), description: t("auth.login_to_react"), variant: "destructive" });
       return;
     }
 
@@ -203,8 +225,8 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         setUserReactionType(type);
 
         const reactionLabel = reactionTypes.find(rt => rt.type === type)?.label || type;
-        const interactorName = isProfessional ? (profile as any)?.full_name || "Um Profissional" : currentPet?.name || "Um Pet";
-        await createNotification("reaction", `${interactorName} reagiu com ${reactionLabel} ao seu post`);
+        const interactorName = isProfessional ? profile?.full_name || t("common.professional") : currentPet?.name || t("common.pet");
+        await createNotification("reaction", `${interactorName} ${t("feed.reacted_with")} ${reactionLabel} ${t("feed.to_your_post")}`);
       }
       fetchReactions();
     } catch (error) {
@@ -215,7 +237,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   const handleComment = async () => {
     if (!newComment.trim()) return;
     if (!interactorId) {
-      toast({ title: "Ação necessária", description: "Você precisa estar logado ou ter um pet selecionado para comentar.", variant: "destructive" });
+      toast({ title: t("common.action_required"), description: t("feed.login_to_comment"), variant: "destructive" });
       return;
     }
 
@@ -227,26 +249,26 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       const { error } = await supabase.from("comments").insert([commentData]);
 
       if (error) {
-        toast({ title: "Erro ao comentar", variant: "destructive" });
+        toast({ title: t("feed.comment_error"), variant: "destructive" });
         return;
       }
 
-      const interactorName = isProfessional ? (profile as any)?.full_name || "Um Profissional" : currentPet?.name || "Um Pet";
-      await createNotification("comment", `${interactorName} comentou no seu post`);
+      const interactorName = isProfessional ? profile?.full_name || t("common.professional") : currentPet?.name || t("common.pet");
+      await createNotification("comment", `${interactorName} ${t("feed.commented_on_post")}`);
 
       setNewComment("");
       fetchComments();
-      toast({ title: "Comentário adicionado!" });
+      toast({ title: t("feed.comment_added") });
     } catch (error) {
       console.error("Erro ao comentar:", error);
-      toast({ title: "Erro ao comentar", variant: "destructive" });
+      toast({ title: t("feed.comment_error"), variant: "destructive" });
     }
   };
 
   const handleDeletePost = async () => {
-    if (!window.confirm("Excluir post?")) return;
+    if (!window.confirm(t("feed.delete_confirm"))) return;
     await supabase.from("posts").delete().eq("id", post.id);
-    toast({ title: "Post excluído!" });
+    toast({ title: t("feed.post_deleted") });
   };
 
   const handleEditPost = async () => {
@@ -254,37 +276,43 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
     await supabase.from("posts").update({ description: editedDescription.trim() }).eq("id", post.id);
     setIsEditing(false);
     post.description = editedDescription.trim();
-    toast({ title: "Post editado!" });
+    toast({ title: t("feed.post_edited") });
   };
 
   return (
     <Card className="card-elevated border-0 md:border overflow-hidden mb-4 md:mb-6 rounded-none md:rounded-2xl w-full">
       <CardHeader className="flex flex-row items-center justify-between p-3 md:p-4">
-        <Link to={`/pet/${pet?.id}`} className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 md:h-10 md:w-10 border border-border">
-            <AvatarImage src={pet?.avatar_url || undefined} />
-            <AvatarFallback>{pet?.name?.[0] || "?"}</AvatarFallback>
-          </Avatar>
+        <div className="flex items-center gap-3">
+          <Link to={`/pet/${pet?.id}`}>
+            <Avatar className="h-10 w-10 border border-border">
+              <AvatarImage src={pet?.avatar_url || undefined} />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {pet?.name?.[0] || "P"}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
           <div>
-            <p className="font-bold text-sm md:text-base">{pet?.name || "Carregando..."}</p>
-            <p className="text-[10px] md:text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
+            <Link to={`/pet/${pet?.id}`} className="font-bold text-sm hover:underline">
+              {pet?.name}
+            </Link>
+            <p className="text-[10px] text-muted-foreground">
+              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: getDateLocale() })}
             </p>
           </div>
-        </Link>
+        </div>
         {isMyPost && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreIcon className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <MoreIcon size={18} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                <EditIcon className="h-4 w-4 mr-2" />Editar
+            <DropdownMenuContent align="end" className="rounded-xl">
+              <DropdownMenuItem onClick={() => setIsEditing(true)} className="gap-2">
+                <EditIcon size={14} /> {t("common.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDeletePost} className="text-destructive">
-                <TrashIcon className="h-4 w-4 mr-2" />Excluir
+              <DropdownMenuItem onClick={handleDeletePost} className="gap-2 text-destructive">
+                <TrashIcon size={14} /> {t("common.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -292,143 +320,96 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       </CardHeader>
 
       <CardContent className="p-0">
-        {post.media_url && (
-          <div className="relative w-full bg-black/5 flex items-center justify-center overflow-hidden aspect-square md:aspect-video max-h-[500px]">
-            <Dialog>
-              <DialogTrigger asChild>
-                <div className="relative w-full h-full flex items-center justify-center cursor-pointer">
-                  {post.type === 'video' ? (
-                    <video 
-                      src={post.media_url} 
-                      className="w-full h-full object-cover" 
-                      controls
-                    />
-                  ) : (
-                    <img src={post.media_url} alt="Post" className="w-full h-full object-cover" />
-                  )}
-                  <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-black/40 text-white hover:bg-black/60 h-8 w-8 z-10">
-                    <MaximizeIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl p-0 border-0 bg-black/90">
-                {post.type === 'video' ? (
-                  <video 
-                    src={post.media_url} 
-                    className="w-full h-auto max-h-[90vh] object-contain" 
-                    controls 
-                    autoPlay
-                  />
-                ) : (
-                  <img src={post.media_url} alt="Post Full" className="w-full h-auto max-h-[90vh] object-contain" />
-                )}
-              </DialogContent>
-            </Dialog>
+        {isEditing ? (
+          <div className="p-4 space-y-3">
+            <Input 
+              value={editedDescription} 
+              onChange={(e) => setEditedDescription(e.target.value)}
+              className="rounded-xl"
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleEditPost} className="rounded-xl">{t("common.save")}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl">{t("common.cancel")}</Button>
+            </div>
           </div>
+        ) : (
+          post.description && <p className="px-4 pb-3 text-sm leading-relaxed">{post.description}</p>
         )}
         
-        <div className="p-3 md:p-4">
-          {isEditing ? (
-            <div className="space-y-2">
-              <Input value={editedDescription} onChange={(e) => setEditedDescription(e.target.value)} className="text-sm" />
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>Cancelar</Button>
-                <Button size="sm" onClick={handleEditPost}>Salvar</Button>
-              </div>
-            </div>
-          ) : post.description && (
-            <p className="text-sm leading-relaxed">
-              <span className="font-bold mr-2">{pet?.name}</span>
-              {post.description}
-            </p>
-          )}
-        </div>
+        {post.media_url && (
+          <div className="relative aspect-square md:aspect-video bg-muted overflow-hidden">
+            <img 
+              src={post.media_url} 
+              alt="Post" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
       </CardContent>
 
-      <CardFooter className="flex flex-col p-3 md:p-4 pt-0">
-        <div className="flex justify-between items-center w-full border-b border-border/50 pb-2 mb-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-            {reactions.map((r) => r.count > 0 && (
-              <div 
-                key={r.type} 
+      <CardFooter className="flex flex-col p-0">
+        <div className="flex items-center justify-between w-full px-2 py-1 border-t border-border/50">
+          <div className="flex items-center gap-1">
+            {reactionTypes.map((rt) => (
+              <Button
+                key={rt.type}
+                variant="ghost"
+                size="sm"
+                onClick={() => handleReaction(rt.type)}
                 className={cn(
-                  "flex items-center gap-1 p-1 px-2 rounded-full text-[10px] md:text-xs cursor-pointer transition-all hover:scale-105 flex-shrink-0", 
-                  r.hasReacted ? "bg-primary/10 text-primary border border-primary/20" : "bg-muted hover:bg-muted/80 border border-transparent"
-                )} 
-                onClick={() => handleReaction(r.type)}
+                  "h-9 px-2 gap-1.5 rounded-full transition-all",
+                  userReactionType === rt.type ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted"
+                )}
               >
-                <span>{reactionTypes.find(rt => rt.type === r.type)?.emoji}</span>
-                <span className="font-bold">{r.count}</span>
-              </div>
+                <span className="text-lg">{rt.emoji}</span>
+                <span className="text-xs">{reactions.find(r => r.type === rt.type)?.count || 0}</span>
+              </Button>
             ))}
           </div>
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setShowComments(!showComments)} 
-            className="text-muted-foreground hover:text-primary h-8 px-2 flex-shrink-0"
+            onClick={() => setShowComments(!showComments)}
+            className="h-9 px-3 gap-2 rounded-full text-muted-foreground"
           >
-            <CommentIcon className="h-4 w-4 mr-1" />
-            <span className="text-xs font-medium">{comments.length}</span>
+            <CommentIcon size={18} />
+            <span className="text-xs font-bold">{comments.length}</span>
           </Button>
         </div>
 
-        <div className="flex justify-around w-full py-1">
-          {reactionTypes.map((rt) => (
-            <Button 
-              key={rt.type} 
-              variant="ghost" 
-              size="sm" 
-              className={cn(
-                "text-xl md:text-2xl transition-all active:scale-150 hover:bg-transparent h-10 w-10 p-0", 
-                userReactionType === rt.type ? "scale-110 drop-shadow-sm" : "grayscale opacity-70 hover:grayscale-0 hover:opacity-100"
-              )} 
-              onClick={() => handleReaction(rt.type)}
-            >
-              {rt.emoji}
-            </Button>
-          ))}
-        </div>
-
         {showComments && (
-          <div className="w-full mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="max-h-60 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-              {comments.length === 0 ? (
-                <p className="text-center text-xs text-muted-foreground py-4">Nenhum comentário ainda. Seja o primeiro!</p>
-              ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="flex gap-2 md:gap-3 items-start">
-                    <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0 border border-border">
-                      <AvatarImage src={c.pet?.avatar_url || c.user_profile?.avatar_url || undefined} />
-                      <AvatarFallback className="text-[10px]">{(c.pet?.name || c.user_profile?.full_name || "?")[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 bg-muted/50 p-2 rounded-2xl">
-                      <p className="font-bold text-[10px] md:text-xs">{c.pet?.name || c.user_profile?.full_name}</p>
-                      <p className="text-xs md:text-sm">{c.text}</p>
-                    </div>
-                  </div>
-                ))
-              )}
+          <div className="w-full px-4 py-3 bg-muted/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex gap-2">
+              <Input 
+                placeholder={t("feed.write_comment")}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+                className="h-9 text-xs rounded-full bg-background border-border/50"
+              />
+              <Button size="icon" onClick={handleComment} className="h-9 w-9 rounded-full shrink-0">
+                <SendIcon size={14} />
+              </Button>
             </div>
-            {interactorId && (
-              <div className="flex gap-2 pt-2">
-                <Input 
-                  placeholder="Adicione um comentário..." 
-                  value={newComment} 
-                  onChange={(e) => setNewComment(e.target.value)} 
-                  onKeyDown={(e) => e.key === "Enter" && handleComment()} 
-                  className="h-9 text-xs md:text-sm rounded-full bg-muted/50 border-none focus-visible:ring-1" 
-                />
-                <Button 
-                  onClick={handleComment} 
-                  size="icon" 
-                  className="h-9 w-9 flex-shrink-0 rounded-full"
-                  disabled={!newComment.trim()}
-                >
-                  <SendIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarImage src={comment.pet?.avatar_url || comment.user_profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                      {(comment.pet?.name || comment.user_profile?.full_name || "?")[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 bg-background p-2 rounded-2xl rounded-tl-none border border-border/50 shadow-sm">
+                    <p className="text-[11px] font-bold mb-0.5">
+                      {comment.pet?.name || comment.user_profile?.full_name}
+                    </p>
+                    <p className="text-xs text-foreground/90 leading-snug">{comment.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardFooter>

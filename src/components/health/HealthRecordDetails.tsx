@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface HealthRecord {
   id: string;
@@ -40,6 +41,7 @@ interface HealthRecordDetailsProps {
 }
 
 export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record, onClose, onDelete }) => {
+  const { t, i18n } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -52,12 +54,12 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
 
       if (error) throw error;
 
-      toast.success("Registro excluído com sucesso!");
+      toast.success(t("health.delete_success"));
       if (onDelete) onDelete();
       onClose();
     } catch (error: any) {
       console.error("Erro ao excluir registro:", error);
-      toast.error("Erro ao excluir o registro médico");
+      toast.error(t("health.delete_error"));
     } finally {
       setIsDeleting(false);
     }
@@ -72,6 +74,15 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
     }
   };
 
+  const getRecordTypeLabel = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'vacina': return t("health.vaccination");
+      case 'exame': return t("health.exams");
+      case 'consulta': return t("health.consultation");
+      default: return type;
+    }
+  };
+
   return (
     <div className="space-y-5 md:space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="flex items-center justify-between border-b border-border/50 pb-4">
@@ -79,7 +90,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-9 w-9">
             <ChevronLeft size={20} />
           </Button>
-          <h3 className="text-base md:text-lg font-bold text-foreground">Detalhes do Registro</h3>
+          <h3 className="text-base md:text-lg font-bold text-foreground">{t("health.record_details")}</h3>
         </div>
         <div className="flex items-center gap-2">
           <AlertDialog>
@@ -90,20 +101,20 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
             </AlertDialogTrigger>
             <AlertDialogContent className="rounded-2xl w-[90vw] max-w-md">
               <AlertDialogHeader>
-                <AlertDialogTitle>Excluir Registro Médico</AlertDialogTitle>
+                <AlertDialogTitle>{t("health.delete_record_title")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita e o histórico do pet será alterado.
+                  {t("health.delete_record_desc")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                <AlertDialogCancel className="rounded-xl mt-0">Cancelar</AlertDialogCancel>
+                <AlertDialogCancel className="rounded-xl mt-0">{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
                   disabled={isDeleting}
                 >
                   {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Excluir Permanentemente
+                  {t("health.delete_permanently")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -114,14 +125,14 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
       <div className="space-y-5 md:space-y-6">
         <div className="flex flex-col gap-1">
           <span className={cn("w-fit text-[9px] md:text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border mb-2", getRecordBadgeClass(record.record_type))}>
-            {record.record_type}
+            {getRecordTypeLabel(record.record_type)}
           </span>
           <h2 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
             {record.health_standards_vaccines?.name || record.health_standards_exams?.name || record.title}
           </h2>
           <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mt-1">
             <Calendar size={14} />
-            <span>{new Date(record.record_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+            <span>{new Date(record.record_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
           </div>
         </div>
 
@@ -132,7 +143,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
                 <Weight size={20} />
               </div>
               <div>
-                <p className="text-[9px] md:text-[10px] text-amber-600 uppercase font-bold tracking-wider">Peso Registrado</p>
+                <p className="text-[9px] md:text-[10px] text-amber-600 uppercase font-bold tracking-wider">{t("health.weight_registered")}</p>
                 <p className="font-bold text-sm md:text-base text-amber-900">{record.weight}</p>
               </div>
             </div>
@@ -144,7 +155,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
                 <User size={20} />
               </div>
               <div>
-                <p className="text-[9px] md:text-[10px] text-blue-600 uppercase font-bold tracking-wider">Profissional</p>
+                <p className="text-[9px] md:text-[10px] text-blue-600 uppercase font-bold tracking-wider">{t("health.professional")}</p>
                 <p className="font-bold text-sm md:text-base text-blue-900">{record.professional_name}</p>
               </div>
             </div>
@@ -156,7 +167,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
             <div className="flex items-start gap-3 p-3 md:p-4 bg-red-50/50 rounded-2xl border border-red-100">
               <AlertCircle className="text-red-500 mt-0.5 shrink-0" size={18} />
               <div>
-                <p className="text-[10px] md:text-xs font-bold text-red-600 uppercase tracking-wider">Alergias Identificadas</p>
+                <p className="text-[10px] md:text-xs font-bold text-red-600 uppercase tracking-wider">{t("health.allergies_identified")}</p>
                 <p className="text-xs md:text-sm text-red-900 font-medium mt-1">{record.allergies}</p>
               </div>
             </div>
@@ -166,7 +177,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
             <div className="flex items-start gap-3 p-3 md:p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
               <Pill className="text-indigo-500 mt-0.5 shrink-0" size={18} />
               <div>
-                <p className="text-[10px] md:text-xs font-bold text-indigo-600 uppercase tracking-wider">Medicamentos Prescritos</p>
+                <p className="text-[10px] md:text-xs font-bold text-indigo-600 uppercase tracking-wider">{t("health.medications_prescribed")}</p>
                 <p className="text-xs md:text-sm text-indigo-900 font-medium mt-1">{record.medications}</p>
               </div>
             </div>
@@ -176,7 +187,7 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
             <div className="p-4 md:p-5 bg-muted/30 rounded-2xl border border-border/50">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={16} className="text-muted-foreground" />
-                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider">Observações Clínicas</p>
+                <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("health.clinical_notes")}</p>
               </div>
               <p className="text-xs md:text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{record.notes || record.observation}</p>
             </div>
@@ -191,18 +202,18 @@ export const HealthRecordDetails: React.FC<HealthRecordDetailsProps> = ({ record
             className="flex items-center justify-center gap-2 w-full p-3 md:p-4 rounded-2xl border-2 border-dashed border-primary/20 text-primary font-bold hover:bg-primary/5 transition-all text-sm md:text-base"
           >
             <FileText size={20} />
-            Visualizar Anexo / Receita
+            {t("health.view_attachment")}
           </a>
         )}
 
         <div className="flex items-center justify-center gap-2 text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest pt-2">
           <Hash size={10} />
-          Versão do Prontuário: {record.version}
+          {t("health.record_version")}: {record.version}
         </div>
       </div>
 
       <div className="pt-2">
-        <Button onClick={onClose} variant="outline" className="w-full h-11 md:h-12 rounded-xl font-bold text-sm md:text-base">Voltar ao Prontuário</Button>
+        <Button onClick={onClose} variant="outline" className="w-full h-11 md:h-12 rounded-xl font-bold text-sm md:text-base">{t("health.back_to_records")}</Button>
       </div>
     </div>
   );
