@@ -8,16 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR, enUS, es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { UserProfile } from "@/contexts/UserProfileContext";
 import { useTranslation } from "react-i18next";
+import { MediaLightbox } from "./MediaLightbox";
 
 // Usando lucide-react padrão para ícones
-import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, Maximize as MaximizeIcon, PawPrint } from "lucide-react";
+import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, PawPrint } from "lucide-react";
 
 interface Post {
   id: string;
@@ -63,6 +63,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   const [userReactionType, setUserReactionType] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState(post.description || "");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const reactionTypes = [
     { type: "patinha", emoji: "🐾", label: t("feed.reactions.patinha") },
@@ -280,8 +281,9 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   };
 
   return (
-    <Card className="card-elevated border-0 md:border overflow-hidden mb-4 md:mb-6 rounded-none md:rounded-2xl w-full">
-      <CardHeader className="flex flex-row items-center justify-between p-3 md:p-4">
+    <>
+    <Card className="glass-card glass-shadow-md border-0 md:border overflow-hidden mb-4 md:mb-6 rounded-3xl w-full transition-all duration-300 hover:glass-card-light">
+      <CardHeader className="glass-header flex flex-row items-center justify-between p-3 md:p-4 border-b border-white/20 dark:border-white/10">
         <div className="flex items-center gap-3">
           <Link to={`/pet/${pet?.id}`}>
             <Avatar className="h-10 w-10 border border-border">
@@ -319,13 +321,13 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         )}
       </CardHeader>
 
-      <CardContent className="p-0">
+      <CardContent className="glass-content p-0 border-b border-white/20 dark:border-white/10">
         {isEditing ? (
           <div className="p-4 space-y-3">
             <Input 
               value={editedDescription} 
               onChange={(e) => setEditedDescription(e.target.value)}
-              className="rounded-xl"
+              className="rounded-xl glass-blur-sm"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={handleEditPost} className="rounded-xl">{t("common.save")}</Button>
@@ -333,31 +335,45 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
             </div>
           </div>
         ) : (
-          post.description && <p className="px-4 pb-3 text-sm leading-relaxed">{post.description}</p>
+          post.description && <p className="px-4 pb-3 text-sm leading-relaxed text-foreground/90">{post.description}</p>
         )}
         
         {post.media_url && (
-          <div className="relative aspect-square md:aspect-video bg-muted overflow-hidden">
+          <div className="relative aspect-square md:aspect-video bg-muted overflow-hidden rounded-2xl cursor-pointer group" onClick={() => setLightboxOpen(true)}>
             {post.type === 'video' ? (
-              <video 
-                src={post.media_url} 
-                controls 
-                className="w-full h-full object-cover"
-                playsInline
-              />
+              <>
+                <video 
+                  src={post.media_url} 
+                  className="w-full h-full object-cover"
+                  playsInline
+                  autoPlay
+                  muted
+                  loop
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                  <div className="bg-white/90 group-hover:bg-white transition-all duration-300 rounded-full p-3 opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-transform">
+                    <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </>
             ) : (
-              <img 
-                src={post.media_url} 
-                alt="Post" 
-                className="w-full h-full object-cover"
-              />
+              <>
+                <img 
+                  src={post.media_url} 
+                  alt="Post" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center" />
+              </>
             )}
           </div>
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col p-0">
-        <div className="flex items-center justify-between w-full px-2 py-1 border-t border-border/50">
+      <CardFooter className="glass-footer flex flex-col p-0 border-t border-white/20 dark:border-white/10">
+        <div className="flex items-center justify-between w-full px-2 py-1 border-b border-white/10 dark:border-white/5">
           <div className="flex items-center gap-1">
             {reactionTypes.map((rt) => (
               <Button
@@ -387,14 +403,14 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         </div>
 
         {showComments && (
-          <div className="w-full px-4 py-3 bg-muted/30 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="w-full px-4 py-3 glass-layer-1 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex gap-2">
               <Input 
                 placeholder={t("feed.write_comment")}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-                className="h-9 text-xs rounded-full bg-background border-border/50"
+                className="h-9 text-xs rounded-full glass-blur-sm bg-white/50 dark:bg-white/10 border-white/30 dark:border-white/15"
               />
               <Button size="icon" onClick={handleComment} className="h-9 w-9 rounded-full shrink-0">
                 <SendIcon size={14} />
@@ -410,7 +426,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
                       {(comment.pet?.name || comment.user_profile?.full_name || "?")[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 bg-background p-2 rounded-2xl rounded-tl-none border border-border/50 shadow-sm">
+                  <div className="flex-1 glass-card-light p-2 rounded-2xl rounded-tl-none shadow-sm">
                     <p className="text-[11px] font-bold mb-0.5">
                       {comment.pet?.name || comment.user_profile?.full_name}
                     </p>
@@ -423,5 +439,17 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         )}
       </CardFooter>
     </Card>
+
+    {post.media_url && (
+      <MediaLightbox
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        mediaUrl={post.media_url}
+        mediaType={post.type === 'video' ? 'video' : 'image'}
+        petName={pet?.name}
+        description={post.description}
+      />
+    )}
+    </>
   );
 };
