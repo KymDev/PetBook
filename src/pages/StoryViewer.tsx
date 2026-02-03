@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet } from "@/contexts/PetContext";
@@ -37,6 +37,8 @@ export default function StoryViewer() {
   const [progress, setProgress] = useState(0);
   const [showViewers, setShowViewers] = useState(false);
   const [viewers, setViewers] = useState<any[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isVideo = story?.media_url?.match(/\.(mp4|webm|ogg|mov)$|video/i);
 
   useEffect(() => {
     if (id) {
@@ -47,6 +49,11 @@ export default function StoryViewer() {
 
   useEffect(() => {
     if (!loading && story && !showViewers) {
+      if (isVideo) {
+        // Progress for video is handled by onTimeUpdate
+        return;
+      }
+      
       const interval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 100) {
@@ -55,10 +62,21 @@ export default function StoryViewer() {
           }
           return prev + 1;
         });
-      }, 50);
+      }, 50); // 5 seconds for images
       return () => clearInterval(interval);
     }
-  }, [loading, story, showViewers, currentIndex, allStories.length]);
+  }, [loading, story, showViewers, currentIndex, allStories.length, isVideo]);
+
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current) {
+      const currentProgress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+      setProgress(currentProgress);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    handleNext();
+  };
 
   const handleDeleteStory = async () => {
     if (!window.confirm("Tem certeza que deseja excluir este Story? Esta ação é irreversível.")) {
@@ -139,7 +157,7 @@ export default function StoryViewer() {
     const { data: profileData } = await supabase
       .from("user_profiles")
       .select("account_type")
-      .eq("id", supabase.auth.getUser().then(res => res.data.user?.id))
+      .eq("id", (await supabase.auth.getUser()).data.user?.id)
       .single();
     
     const isProfessional = profileData?.account_type === 'professional';
@@ -244,7 +262,21 @@ export default function StoryViewer() {
           <div className="w-1/3 h-full cursor-pointer z-10" onClick={() => {}} />
           <div className="w-1/3 h-full cursor-pointer z-10" onClick={handleNext} />
         </div>
-        <img src={story.media_url} alt="Story" className="max-w-full max-h-full object-contain" />
+        
+        {isVideo ? (
+          <video 
+            ref={videoRef}
+            src={story.media_url} 
+            autoPlay 
+            playsInline
+            onTimeUpdate={handleVideoTimeUpdate}
+            onEnded={handleVideoEnded}
+            className="max-w-full max-h-full object-contain"
+          />
+        ) : (
+          <img src={story.media_url} alt="Story" className="max-w-full max-h-full object-contain" />
+        )}
+
         {story.description && (
           <div className="absolute bottom-10 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 text-center">
             <p className="text-white text-sm font-medium drop-shadow-md">{story.description}</p>

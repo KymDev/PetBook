@@ -423,9 +423,18 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       {/* Mobile Header */}
       <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-between px-4">
         <Link to="/feed" className="flex-shrink-0">
-          <PetBookLogo size="xs" />
+          <PetBookLogo size="sm" />
         </Link>
         <div className="flex items-center gap-1">
+          <Link to="/notifications" className="relative p-2">
+            <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
@@ -449,15 +458,6 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Link to="/notifications" className="relative p-2">
-            <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </Link>
 
           <Link to="/services" className="p-2">
             <Stethoscope className={cn("h-5 w-5", location.pathname === "/services" && "fill-current")} />

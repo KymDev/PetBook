@@ -311,7 +311,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
               <DropdownMenuItem onClick={() => setIsEditing(true)} className="gap-2">
                 <EditIcon size={14} /> {t("common.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDeletePost} className="gap-2 text-destructive">
+              <DropdownMenuItem onClick={handleDeletePost} className="gap-2 text-red-600">
                 <TrashIcon size={14} /> {t("common.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -338,11 +338,20 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         
         {post.media_url && (
           <div className="relative aspect-square md:aspect-video bg-muted overflow-hidden">
-            <img 
-              src={post.media_url} 
-              alt="Post" 
-              className="w-full h-full object-cover"
-            />
+            {post.type === 'video' ? (
+              <video 
+                src={post.media_url} 
+                controls 
+                className="w-full h-full object-cover"
+                playsInline
+              />
+            ) : (
+              <img 
+                src={post.media_url} 
+                alt="Post" 
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
         )}
       </CardContent>
