@@ -68,6 +68,7 @@ const RootRedirect = () => {
   const { myPets, loading: petLoading } = usePet();
   const { profile, loading: profileLoading, isProfileComplete } = useUserProfile();
 
+  // Espera todos os carregamentos terminarem antes de decidir o redirecionamento
   if (authLoading || petLoading || profileLoading) return <LoadingPage />;
 
   if (!user) return <Navigate to="/auth" replace />;
@@ -109,18 +110,33 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { myPets, loading: petLoading } = usePet();
   const { profile, loading: profileLoading } = useUserProfile();
 
+  // ESSENCIAL: Não redireciona enquanto estiver carregando
   if (authLoading || petLoading || profileLoading) return <LoadingPage />;
+  
   if (!user) return <Navigate to="/auth" replace />;
 
   const isProfessional = profile?.account_type === 'professional';
   const hasPets = myPets && myPets.length > 0;
-  const isCreatePetPage = window.location.pathname.includes('/create-pet');
-  const isSignupChoicePage = window.location.pathname.includes('/signup-choice');
-  const isProfessionalSignupPage = window.location.pathname.includes('/professional-signup');
+  
+  // Verifica em qual página o usuário está tentando entrar
+  const path = window.location.pathname;
+  const isCreatePetPage = path.includes('/create-pet');
+  const isSignupChoicePage = path.includes('/signup-choice');
+  const isProfessionalSignupPage = path.includes('/professional-signup');
+  const isAuthPage = path.includes('/auth');
 
-  // Se não tem pet e não é profissional, e não está em uma página de "setup", redireciona
-  if (!hasPets && !isProfessional && !isCreatePetPage && !isSignupChoicePage && !isProfessionalSignupPage) {
-    return <Navigate to="/signup-choice" replace />;
+  // Se o perfil ainda não carregou completamente, não faz redirecionamentos de "setup"
+  if (!profile && !authLoading) return <LoadingPage />;
+
+  // Lógica de redirecionamento para setup (apenas se não estiver nas páginas de setup)
+  if (!isCreatePetPage && !isSignupChoicePage && !isProfessionalSignupPage && !isAuthPage) {
+    if (isProfessional) {
+      // Se é profissional mas não completou o cadastro, manda para o signup profissional
+      // Nota: Você pode adicionar uma verificação de isProfileComplete aqui se desejar
+    } else if (!hasPets) {
+      // Se é usuário normal mas não tem pet, manda para escolha ou criar pet
+      return <Navigate to="/signup-choice" replace />;
+    }
   }
 
   return children;
