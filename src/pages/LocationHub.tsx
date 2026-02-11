@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Phone, AlertTriangle, Plus, Store, Navigation, Edit2, Trash2, X } from "lucide-react";
+import { MapPin, Phone, AlertTriangle, Navigation, Check, X, Store, Briefcase, Search, Info, Loader2 } from "lucide-react";
 import { locationHubService, MissingPet, PetFriendlyPlace } from "@/integrations/supabase/locationHubService";
-import { getUserLocation, Location } from "@/integrations/supabase/geolocationService";
+import { getUserLocation, searchNearbyPlaces, Location } from "@/integrations/supabase/geolocationService";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Leaflet Icon Fix
 // @ts-ignore
@@ -25,17 +26,25 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+// Ícones Customizados
 const createPetIcon = (photoUrl: string) => new L.DivIcon({
-    html: `<div class="relative w-12 h-12 rounded-full border-4 border-red-600 bg-white shadow-lg overflow-hidden transform transition-transform hover:scale-110">
+    html: `<div class="relative w-14 h-14 rounded-full border-4 border-red-600 bg-white shadow-2xl overflow-hidden transform transition-all hover:scale-125 hover:z-[1000]">
             <img src="${photoUrl}" class="w-full h-full object-cover" />
-            <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">!</div>
+            <div class="absolute top-0 right-0 w-4 h-4 bg-red-600 rounded-full border-2 border-white animate-pulse"></div>
+          </div>`,
+    className: '', iconSize: [56, 56], iconAnchor: [28, 56],
+});
+
+const createProfessionalIcon = (avatarUrl: string) => new L.DivIcon({
+    html: `<div class="w-12 h-12 rounded-full border-4 border-blue-500 bg-white shadow-xl overflow-hidden transform transition-all hover:scale-110">
+            <img src="${avatarUrl || 'https://via.placeholder.com/48'}" class="w-full h-full object-cover" />
           </div>`,
     className: '', iconSize: [48, 48], iconAnchor: [24, 48],
 });
 
-const placeIcon = new L.DivIcon({
-    html: `<div class="w-10 h-10 rounded-full border-4 border-primary bg-white shadow-lg flex items-center justify-center text-primary transform transition-transform hover:scale-110">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+const createPlaceIcon = (color: string) => new L.DivIcon({
+    html: `<div class="w-10 h-10 rounded-full border-4 border-${color} bg-white shadow-lg flex items-center justify-center text-${color} transform transition-all hover:scale-110">
+            <Store size={20} />
           </div>`,
     className: '', iconSize: [40, 40], iconAnchor: [20, 40],
 });
@@ -47,7 +56,7 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
 
 const MapUpdater = ({ center }: { center: [number, number] }) => {
     const map = useMap();
-    useEffect(() => { map.setView(center, map.getZoom()); }, [center, map]);
+    useEffect(() => { map.setView(center, 15); }, [center, map]);
     return null;
 };
 
@@ -55,24 +64,20 @@ const LocationHub = () => {
   const { user } = useAuth();
   const { myPets } = usePet();
   const [missingPets, setMissingPets] = useState<MissingPet[]>([]);
-  const [places, setPlaces] = useState<PetFriendlyPlace[]>([]);
+  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
   const [userLoc, setUserLoc] = useState<Location | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([-23.5505, -46.6333]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   
-  const [isAddingPlace, setIsAddingPlace] = useState(false);
+  // Modais
   const [isReportingPet, setIsReportingPet] = useState(false);
-  const [editingPlace, setEditingPlace] = useState<PetFriendlyPlace | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
 
-  const [petDesc, setPetDesc] = useState("");
-  const [petWhatsapp, setPetWhatsapp] = useState("");
-  const [selectedPetId, setSelectedPetId] = useState("");
-  const [petPhoto, setPetPhoto] = useState<File | null>(null);
-  
-  const [placeName, setPlaceName] = useState("");
-  const [placeDesc, setPlaceDesc] = useState("");
-  const [placeCategory, setPlaceCategory] = useState("Restaurante");
+  // Forms
+  const [petForm, setPetForm] = useState({ petId: "", desc: "", whatsapp: "", photo: null as File | null });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => { loadInitialData(); }, []);
@@ -83,120 +88,181 @@ const LocationHub = () => {
       const loc = await getUserLocation();
       setUserLoc(loc);
       setMapCenter([loc.latitude, loc.longitude]);
-    } catch (e) { console.warn("GPS off"); }
-    await loadMapData();
+      await loadMapData(loc.latitude, loc.longitude);
+    } catch (e) { 
+      toast.error("Habilite o GPS para ver locais próximos");
+      await loadMapData(mapCenter[0], mapCenter[1]);
+    }
     setIsLoading(false);
   };
 
-  const loadMapData = async () => {
+  const loadMapData = async (lat: number, lon: number) => {
+    setIsSearching(true);
     try {
-      const [m, p] = await Promise.all([locationHubService.getMissingPets(), locationHubService.getPetFriendlyPlaces()]);
-      setMissingPets(m); setPlaces(p);
-    } catch (e) { toast.error("Erro ao carregar dados"); }
+      const [m, pro, osm] = await Promise.all([
+        locationHubService.getMissingPets(),
+        locationHubService.getProfessionals(),
+        searchNearbyPlaces(lat, lon)
+      ]);
+      setMissingPets(m); 
+      setProfessionals(pro || []);
+      setNearbyPlaces(osm);
+    } catch (e) { toast.error("Erro ao carregar dados do mapa"); }
+    finally { setIsSearching(false); }
   };
 
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedCoord([lat, lng]);
-    toast.info("Ponto marcado!", { description: "Clique em 'Adicionar' para salvar este local." });
+    toast("Local marcado!", { description: "Clique em 'Pet Perdido' para lançar um alerta aqui." });
   };
 
-  const handleSavePlace = async () => {
-    if (!placeName || !placeDesc || (!selectedCoord && !editingPlace)) {
-      toast.error("Preencha os campos e marque no mapa"); return;
-    }
+  const handleToggleFriendly = async (place: any, isFriendly: boolean) => {
+    if (!user) return toast.error("Faça login para avaliar");
     setIsSubmitting(true);
     try {
-      const payload = { 
-        name: placeName, description: placeDesc, category: placeCategory, 
-        latitude: selectedCoord ? selectedCoord[0] : editingPlace?.latitude, 
-        longitude: selectedCoord ? selectedCoord[1] : editingPlace?.longitude, 
-        user_id: user?.id 
-      };
-      if (editingPlace) await locationHubService.updatePetFriendlyPlace(editingPlace.id, payload);
-      else await locationHubService.addPetFriendlyPlace(payload);
-      
-      toast.success(editingPlace ? "Local atualizado!" : "Local adicionado!");
-      setIsAddingPlace(false); setEditingPlace(null); setSelectedCoord(null);
-      setPlaceName(""); setPlaceDesc(""); await loadMapData();
-    } catch (e) { toast.error("Erro ao salvar"); }
+      await locationHubService.togglePetFriendlyStatus(place, isFriendly, user.id);
+      toast.success(isFriendly ? "Marcado como Pet Friendly! 🐾" : "Marcado como Não Amigável");
+      setSelectedPlace(null);
+      await loadMapData(mapCenter[0], mapCenter[1]);
+    } catch (e) { toast.error("Erro ao salvar avaliação"); }
     finally { setIsSubmitting(false); }
   };
 
-  const handleDeletePlace = async (id: string) => {
-    if (!confirm("Excluir este local?")) return;
+  const handleReportPet = async () => {
+    if (!petForm.petId || !petForm.whatsapp || !selectedCoord) return toast.error("Preencha os campos e marque no mapa");
+    setIsSubmitting(true);
     try {
-      await locationHubService.deletePetFriendlyPlace(id);
-      toast.success("Removido!"); await loadMapData();
-    } catch (e) { toast.error("Erro ao remover"); }
+      let photoUrl = null;
+      if (petForm.photo) photoUrl = await locationHubService.uploadPetPhoto(petForm.photo);
+      await locationHubService.reportMissingPet({
+        pet_id: petForm.petId, user_id: user?.id, description: petForm.desc,
+        contact_whatsapp: petForm.whatsapp, photo_url: photoUrl,
+        latitude: selectedCoord[0], longitude: selectedCoord[1]
+      });
+      toast.success("Alerta de pet perdido publicado!");
+      setIsReportingPet(false); setSelectedCoord(null);
+      await loadMapData(mapCenter[0], mapCenter[1]);
+    } catch (e) { toast.error("Erro ao publicar alerta"); }
+    finally { setIsSubmitting(false); }
   };
 
   return (
     <MainLayout>
-      <div className="container max-w-6xl py-4 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2"><MapPin className="text-primary" /> Hub de Localização</h1>
-            <p className="text-sm text-muted-foreground">Encontre locais e ajude pets perdidos.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={() => setIsReportingPet(true)} className="gap-2"><AlertTriangle className="h-4 w-4" /> Pet Perdido</Button>
-            <Button variant="outline" size="sm" onClick={() => { setEditingPlace(null); setIsAddingPlace(true); }} className="gap-2 border-primary text-primary"><Plus className="h-4 w-4" /> Local</Button>
-          </div>
+      <div className="h-[calc(100vh-80px)] relative flex flex-col">
+        {/* Barra de Busca Estilo Uber */}
+        <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col gap-2">
+            <div className="relative">
+                <Input 
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl shadow-2xl border-0 bg-white/95 backdrop-blur-md text-lg font-medium"
+                    placeholder="Encontre locais pet-friendly ao redor..."
+                    readOnly
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+                {isSearching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary animate-spin" size={20} />}
+            </div>
+            
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <Badge className="bg-red-600 hover:bg-red-700 cursor-pointer px-4 py-2 rounded-full shadow-lg" onClick={() => setIsReportingPet(true)}>
+                    <AlertTriangle size={14} className="mr-2" /> Pet Perdido
+                </Badge>
+                <Badge variant="secondary" className="bg-white hover:bg-gray-100 text-black cursor-pointer px-4 py-2 rounded-full shadow-lg border-0">
+                    <Store size={14} className="mr-2" /> {nearbyPlaces.length} Locais Reais
+                </Badge>
+            </div>
         </div>
 
-        <Card className="overflow-hidden shadow-2xl border-2 border-primary/10 rounded-2xl relative">
+        {/* Mapa */}
+        <div className="flex-1 w-full relative">
             {isLoading ? (
-                <div className="w-full h-[500px] flex items-center justify-center bg-muted animate-pulse"><Navigation className="animate-spin text-primary mr-2" /> Carregando...</div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted z-[1001]">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="font-bold text-primary">Solicitando GPS...</p>
+                </div>
             ) : (
-                <MapContainer center={mapCenter} zoom={13} style={{ height: '500px', width: '100%' }}>
+                <MapContainer center={mapCenter} zoom={15} zoomControl={false} style={{ height: '100%', width: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapEvents onMapClick={handleMapClick} />
                     <MapUpdater center={mapCenter} />
-                    {selectedCoord && <Marker position={selectedCoord}><Popup>Novo Ponto</Popup></Marker>}
+                    
+                    {selectedCoord && <Marker position={selectedCoord}><Popup><p className="font-bold">Local Selecionado</p></Popup></Marker>}
+
+                    {/* Pets Perdidos */}
                     {missingPets.map(p => p.latitude && (
                         <Marker key={p.id} position={[p.latitude, p.longitude!]} icon={createPetIcon(p.photo_url || p.pet?.avatar_url || 'https://via.placeholder.com/64')}>
-                            <Popup><div className="p-1 w-48">
-                                <h3 className="font-bold text-red-600">{p.pet?.name || "Pet Perdido"}</h3>
-                                <img src={p.photo_url || p.pet?.avatar_url || 'https://via.placeholder.com/150'} className="w-full h-24 object-cover rounded my-2" />
-                                <Button size="sm" className="w-full bg-green-500 h-8" onClick={() => window.open(`https://wa.me/${p.contact_whatsapp?.replace(/\D/g, '')}`)}><Phone className="w-3 h-3 mr-1" /> WhatsApp</Button>
+                            <Popup className="rounded-2xl overflow-hidden">
+                                <div className="p-0 w-56">
+                                    <div className="bg-red-600 p-2 text-white text-center font-bold text-sm">PET DESAPARECIDO</div>
+                                    <img src={p.photo_url || p.pet?.avatar_url || 'https://via.placeholder.com/150'} className="w-full h-32 object-cover" />
+                                    <div className="p-3">
+                                        <h3 className="font-bold text-lg">{p.pet?.name}</h3>
+                                        <Button className="w-full bg-green-500 mt-2" onClick={() => window.open(`https://wa.me/${p.contact_whatsapp?.replace(/\D/g, '')}`)}>
+                                            <Phone size={16} className="mr-2" /> WhatsApp
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+
+                    {/* Profissionais */}
+                    {professionals.map(pro => pro.professional_latitude && (
+                        <Marker key={pro.id} position={[pro.professional_latitude, pro.professional_longitude]} icon={createProfessionalIcon(pro.professional_avatar_url)}>
+                            <Popup><div className="p-2 text-center">
+                                <h3 className="font-bold">{pro.full_name}</h3>
+                                <Badge variant="outline" className="my-1">{pro.professional_service_type}</Badge>
+                                <Button size="sm" variant="outline" className="w-full mt-2 rounded-full" onClick={() => window.location.href=`/professional/${pro.id}`}>Ver Perfil</Button>
                             </div></Popup>
                         </Marker>
                     ))}
-                    {places.map(p => p.latitude && (
-                        <Marker key={p.id} position={[p.latitude, p.longitude!]} icon={placeIcon}>
-                            <Popup><div className="p-1">
-                                <h3 className="font-bold flex items-center gap-1"><Store className="w-4 h-4 text-primary" /> {p.name}</h3>
-                                <p className="text-xs my-1">{p.description}</p>
-                                {user?.id === p.user_id && (
-                                    <div className="flex gap-2 mt-2">
-                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingPlace(p); setPlaceName(p.name); setPlaceDesc(p.description || ""); setPlaceCategory(p.category || "Restaurante"); setIsAddingPlace(true); }}><Edit2 className="h-3 w-3" /></Button>
-                                        <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => handleDeletePlace(p.id)}><Trash2 className="h-3 w-3" /></Button>
+
+                    {/* Locais Reais para Validação */}
+                    {nearbyPlaces.map(p => (
+                        <Marker key={p.id} position={[p.latitude, p.longitude]} icon={createPlaceIcon("primary")}>
+                            <Popup>
+                                <div className="p-2 w-48">
+                                    <h3 className="font-bold leading-tight">{p.name}</h3>
+                                    <p className="text-[10px] text-muted-foreground mb-3">{p.category} • {p.address}</p>
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-center mb-1">Este local aceita pets?</p>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" className="flex-1 bg-green-500 hover:bg-green-600 h-8" onClick={() => handleToggleFriendly(p, true)}><Check size={14} /></Button>
+                                            <Button size="sm" variant="destructive" className="flex-1 h-8" onClick={() => handleToggleFriendly(p, false)}><X size={14} /></Button>
+                                        </div>
                                     </div>
-                                )}
-                            </div></Popup>
+                                </div>
+                            </Popup>
                         </Marker>
                     ))}
                 </MapContainer>
             )}
-            <Button size="icon" className="absolute bottom-4 left-4 z-[1000] bg-white text-primary shadow-md" onClick={() => userLoc && setMapCenter([userLoc.latitude, userLoc.longitude])}><Navigation className="w-5 h-5" /></Button>
-        </Card>
+            
+            <div className="absolute bottom-8 right-4 z-[1000] flex flex-col gap-3">
+                <Button size="icon" className="h-14 w-14 rounded-2xl bg-white text-primary shadow-2xl" onClick={() => userLoc && setMapCenter([userLoc.latitude, userLoc.longitude])}>
+                    <Navigation className="h-6 w-6" />
+                </Button>
+            </div>
+        </div>
 
-        <Dialog open={isAddingPlace} onOpenChange={setIsAddingPlace}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>{editingPlace ? "Editar Local" : "Novo Local Pet-Friendly"}</DialogTitle></DialogHeader>
-                <div className="space-y-3 py-2">
-                    <Input placeholder="Nome do local" value={placeName} onChange={e => setPlaceName(e.target.value)} />
-                    <select className="w-full p-2 rounded-md border" value={placeCategory} onChange={e => setPlaceCategory(e.target.value)}>
-                        <option>Restaurante</option><option>Parque</option><option>Shopping</option><option>Hotel</option><option>Outro</option>
+        {/* Modal Pet Perdido */}
+        <Dialog open={isReportingPet} onOpenChange={setIsReportingPet}>
+            <DialogContent className="rounded-3xl">
+                <DialogHeader><DialogTitle className="text-xl font-bold text-red-600">Lançar Alerta de Pet Perdido</DialogTitle></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <select className="w-full p-3 rounded-xl border-2 border-muted" value={petForm.petId} onChange={e => setPetForm({...petForm, petId: e.target.value})}>
+                        <option value="">Selecione seu pet...</option>
+                        {myPets?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
-                    <Textarea placeholder="Descrição..." value={placeDesc} onChange={e => setPlaceDesc(e.target.value)} />
-                    {selectedCoord ? <p className="text-xs text-green-600">✓ Local marcado no mapa</p> : <p className="text-xs text-amber-600">⚠ Clique no mapa para definir a posição</p>}
+                    <Input placeholder="WhatsApp para contato" value={petForm.whatsapp} onChange={e => setPetForm({...petForm, whatsapp: e.target.value})} />
+                    <Textarea placeholder="Descreva onde foi visto..." value={petForm.desc} onChange={e => setPetForm({...petForm, desc: e.target.value})} />
+                    {!selectedCoord && <p className="text-xs text-amber-600 font-bold">⚠️ Clique no mapa para marcar onde o pet foi visto.</p>}
                 </div>
-                <DialogFooter><Button className="w-full gradient-bg" onClick={handleSavePlace} disabled={isSubmitting}>{isSubmitting ? "Salvando..." : "Salvar Local"}</Button></DialogFooter>
+                <DialogFooter>
+                    <Button variant="destructive" className="w-full h-12 rounded-2xl text-lg font-bold" onClick={handleReportPet} disabled={isSubmitting || !selectedCoord}>
+                        {isSubmitting ? "Publicando..." : "Publicar no Mapa"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
-
-        {/* Modal de Pet Perdido omitido por brevidade mas funcional no código real */}
       </div>
     </MainLayout>
   );

@@ -34,14 +34,30 @@ export interface PetFriendlyPlace {
 
 export const locationHubService = {
   async getMissingPets() {
+    // Calcula a data de 7 dias atrás
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     const { data, error } = await supabase
       .from("missing_pets")
       .select("*, pet:pet_id(name, avatar_url)")
       .eq("is_found", false)
+      .gt("created_at", sevenDaysAgo.toISOString())
       .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data as MissingPet[];
+  },
+
+  async getProfessionals() {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("account_type", "professional")
+      .not("professional_latitude", "is", null);
+
+    if (error) throw error;
+    return data;
   },
 
   async reportMissingPet(missingPet: Partial<MissingPet>) {
@@ -107,6 +123,38 @@ export const locationHubService = {
       .eq("id", id);
 
     if (error) throw error;
+  },
+
+  async togglePetFriendlyStatus(place: any, isFriendly: boolean, userId: string) {
+    // Primeiro verifica se o local já existe no nosso banco (se veio do OSM)
+    const { data: existing } = await supabase
+      .from("pet_friendly_places")
+      .select("id")
+      .eq("name", place.name)
+      .filter("latitude", "eq", place.latitude)
+      .maybeSingle();
+
+    if (existing) {
+      return await supabase
+        .from("pet_friendly_places")
+        .update({ 
+          category: isFriendly ? "Pet Friendly" : "Não Aceita Pets",
+          rating: isFriendly ? 5 : 1
+        })
+        .eq("id", existing.id);
+    } else {
+      return await supabase
+        .from("pet_friendly_places")
+        .insert([{
+          name: place.name,
+          category: isFriendly ? "Pet Friendly" : "Não Aceita Pets",
+          description: `Validado pela comunidade como ${isFriendly ? 'amigável' : 'não amigável'} para pets.`,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          user_id: userId,
+          rating: isFriendly ? 5 : 1
+        }]);
+    }
   },
 
   async uploadPetPhoto(file: File) {

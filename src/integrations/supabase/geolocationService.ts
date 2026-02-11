@@ -161,3 +161,44 @@ export function formatDistance(distance: number): string {
   }
   return `${distance.toFixed(1)}km`;
 }
+
+/**
+ * Busca locais de interesse (restaurantes, parques, etc) ao redor de uma coordenada
+ */
+export async function searchNearbyPlaces(lat: number, lon: number, radius: number = 1000): Promise<any[]> {
+  try {
+    // Usando a API Overpass do OpenStreetMap para buscar locais reais
+    const query = `
+      [out:json];
+      (
+        node["amenity"~"restaurant|cafe|pub|park"](around:${radius},${lat},${lon});
+        way["amenity"~"restaurant|cafe|pub|park"](around:${radius},${lat},${lon});
+        node["leisure"~"park|garden"](around:${radius},${lat},${lon});
+        way["leisure"~"park|garden"](around:${radius},${lat},${lon});
+        node["shop"~"pet|mall"](around:${radius},${lat},${lon});
+        way["shop"~"pet|mall"](around:${radius},${lat},${lon});
+      );
+      out body;
+      >;
+      out skel qt;
+    `;
+    
+    const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    
+    return data.elements
+      .filter((e: any) => e.tags && e.tags.name)
+      .map((e: any) => ({
+        id: `osm-${e.id}`,
+        name: e.tags.name,
+        latitude: e.lat || (e.center ? e.center.lat : lat),
+        longitude: e.lon || (e.center ? e.center.lon : lon),
+        category: e.tags.amenity || e.tags.leisure || e.tags.shop || "Local",
+        address: e.tags["addr:street"] || "Endereço não disponível",
+        is_osm: true
+      }));
+  } catch (error) {
+    console.error("Erro ao buscar locais próximos:", error);
+    return [];
+  }
+}
