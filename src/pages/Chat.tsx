@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet, Pet } from "@/contexts/PetContext";
@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Stethoscope } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MessageCircle, Stethoscope, Search } from "lucide-react";
 
 interface ChatRoom {
   id: string;
@@ -28,10 +29,18 @@ const Chat = () => {
   const { user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (currentPet || user) fetchRooms();
   }, [currentPet, user]);
+
+  const filteredRooms = useMemo(() => {
+    return rooms.filter(room => 
+      room.otherParty?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.otherParty?.subtitle?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [rooms, searchQuery]);
 
   const fetchRooms = async () => {
     if (!user) return;
@@ -114,7 +123,19 @@ const Chat = () => {
   return (
     <MainLayout>
       <div className="container max-w-xl py-6 space-y-4">
-        <h1 className="text-2xl font-heading font-bold">Conversas</h1>
+        <div className="flex flex-col gap-4">
+          <h1 className="text-2xl font-heading font-bold">Conversas</h1>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar conversas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 rounded-full bg-muted/50 border-0 focus-visible:ring-primary"
+            />
+          </div>
+        </div>
 
         {loading ? (
           <Card className="card-elevated border-0">
@@ -132,11 +153,18 @@ const Chat = () => {
               </p>
             </CardContent>
           </Card>
+        ) : filteredRooms.length === 0 ? (
+          <Card className="card-elevated border-0">
+            <CardContent className="py-12 text-center">
+              <Search className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhum resultado encontrado para "{searchQuery}"</p>
+            </CardContent>
+          </Card>
         ) : (
-          rooms.map((room) => (
+          filteredRooms.map((room) => (
             <Link 
               key={room.id} 
-              to={room.otherParty?.isProfessional ? `/chat/professional/${room.otherParty.id}` : `/chat/${room.otherParty?.id}`}
+              to={room.otherParty?.isProfessional ? `/chat/professional/${room.otherParty.id}` : `/chat/pet/${room.otherParty?.id}`}
             >
               <Card className="card-elevated border-0 hover:shadow-lg transition-shadow">
                 <CardContent className="flex items-center gap-4 p-4">

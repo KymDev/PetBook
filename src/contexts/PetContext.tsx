@@ -15,6 +15,8 @@ export interface Pet {
   guardian_name: string;
   guardian_instagram_username: string;
   guardian_instagram_url: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at: string;
 }
 

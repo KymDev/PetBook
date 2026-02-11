@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { Loader2, Upload, PawPrint } from "lucide-react";
+import { Loader2, Upload, PawPrint, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
@@ -56,6 +56,7 @@ const CreatePet = () => {
     guardian_name: "",
     guardian_instagram_username: "",
   });
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
   if (!user || loading) {
     return <LoadingScreen message="Carregando..." />;
@@ -133,6 +134,8 @@ const CreatePet = () => {
         avatar_url: finalAvatarUrl,
         guardian_name: form.guardian_name,
         guardian_instagram_username: form.guardian_instagram_username.replace("@", ""),
+        latitude: location?.lat,
+        longitude: location?.lng,
       });
 
       // Garantir que o tipo de conta do usuário seja 'user' após o primeiro pet ser criado
@@ -311,6 +314,28 @@ const CreatePet = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Localização (Opcional)</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={async () => {
+                    try {
+                      const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+                      setLocation({lat: pos.coords.latitude, lng: pos.coords.longitude});
+                      toast({title: "Localização obtida!"});
+                    } catch (e) {
+                      toast({title: "Erro ao obter localização", variant: "destructive"});
+                    }
+                  }}
+                >
+                  <MapPin className="h-4 w-4" />
+                  {location ? `✓ Localização Definida` : "Usar minha localização atual"}
+                </Button>
+                <p className="text-[10px] text-muted-foreground">Isso ajuda a encontrar pets perdidos e locais próximos.</p>
               </div>
 
               <Button

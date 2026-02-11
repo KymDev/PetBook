@@ -45,6 +45,7 @@ import {
   Activity,
   PawPrint,
   Languages,
+  Map as MapIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -223,6 +224,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const navItems = [
     { href: "/feed", icon: Home, label: t("common.home") },
     { href: "/explore", icon: Search, label: t("common.explore") },
+    { href: "/map", icon: MapIcon, label: t("common.map") },
     { 
       href: isProfessional ? "/professional-dashboard" : (currentPet ? `/pet/${currentPet.id}/health` : "/feed"), 
       icon: Activity, 
@@ -421,7 +423,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       </header>
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-between px-4">
+      <header className="fixed top-0 left-0 right-0 z-50 h-[calc(3rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-between px-4">
         <Link to="/feed" className="flex-shrink-0">
           <PetBookLogo size="sm" />
         </Link>
@@ -465,12 +467,12 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </header>
 
-      <main className="pt-12 md:pt-14 pb-16 md:pb-0 min-h-screen">
+      <main className="pt-[calc(3rem+env(safe-area-inset-top))] md:pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 min-h-screen">
         {children}
       </main>
 
       {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-around px-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] border-t border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-around px-2">
         {navItems.map((item) => (
           <Link
             key={item.href}

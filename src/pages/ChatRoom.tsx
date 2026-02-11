@@ -142,8 +142,8 @@ const ChatRoom = () => {
         
         // Autor (quem gerou a notificação)
         related_pet_id: isProfessional ? null : currentPet?.id,
-        // Se o autor for profissional, o related_user_id já está sendo usado para o destinatário no schema.
-        // Como o schema é limitado, vamos confiar que o filtro no frontend resolverá.
+        // Adicionamos o related_user_id do autor se ele for profissional para que o destinatário saiba quem mandou
+        author_user_id: isProfessional ? user?.id : null,
         
         is_read: false,
       });

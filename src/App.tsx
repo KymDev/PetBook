@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PetProvider, usePet } from "@/contexts/PetContext";
+import { AppInitializer } from "@/components/layout/AppInitializer";
 import { UserProfileProvider, useUserProfile } from "@/contexts/UserProfileContext";
 
 import Auth from "./pages/Auth";
@@ -33,6 +34,7 @@ import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import ProfessionalPublicProfile from "./pages/ProfessionalPublicProfile";
 import EditPet from "./pages/EditPet";
 import ScanHealth from "./pages/ScanHealth";
+import LocationHub from "./pages/LocationHub";
 
 import HealthRecordsPage from "./components/HealthRecords/HealthRecordsPage";
 import { useQuery } from "@tanstack/react-query";
@@ -287,6 +289,14 @@ const AppRoutes = () => (
       }
     />
     <Route
+      path="/chat/pet/:petId"
+      element={
+        <ProtectedRoute>
+          <ChatRoom />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/chat/professional/:userId"
       element={
         <ProtectedRoute>
@@ -326,6 +336,14 @@ const AppRoutes = () => (
         </ProtectedRoute>
       }
     />
+    <Route
+      path="/map"
+      element={
+        <ProtectedRoute>
+          <LocationHub />
+        </ProtectedRoute>
+      }
+    />
 
     <Route path="/" element={<RootRedirect />} />
     <Route path="*" element={<NotFound />} />
@@ -341,6 +359,7 @@ const App = () => (
         <AuthProvider>
           <UserProfileProvider>
             <PetProvider>
+              <AppInitializer />
               <AppRoutes />
             </PetProvider>
           </UserProfileProvider>

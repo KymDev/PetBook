@@ -38,7 +38,7 @@ export default function StoryViewer() {
   const [showViewers, setShowViewers] = useState(false);
   const [viewers, setViewers] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const isVideo = story?.media_url?.match(/\.(mp4|webm|ogg|mov)$|video/i);
+  const isVideo = story?.media_url?.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)$/) || story?.media_url?.includes('video');
 
   useEffect(() => {
     if (id) {

@@ -21,7 +21,9 @@
     "email_already_registered_desc": "Este email já está em uso. Tente fazer login.",
     "tagline": "A rede social para você e seu pet",
     "professional_signup": "Cadastro Profissional",
-    "guardian_signup": "Cadastro de Guardião"
+    "guardian_signup": "Cadastro de Guardião",
+    "login_required": "Login necessário",
+    "login_to_react": "Faça login para reagir aos posts"
   },
   "common": {
     "loading": "Carregando...",
@@ -51,12 +53,18 @@
     "save": "Salvar",
     "back": "Voltar",
     "success": "Sucesso",
+    "edit": "Editar",
     "search": "Buscar",
     "no_results": "Nenhum resultado encontrado",
     "see_more": "Ver mais",
     "see_less": "Ver menos",
     "optional": "Opcional",
-    "required": "Obrigatório"
+    "required": "Obrigatório",
+    "action_required": "Ação necessária",
+    "professional": "Profissional",
+    "pet": "Pet",
+    "location_hub": "Hub de Localização",
+    "map": "Mapa"
   },
   "menu": {
     "professional_panel": "Painel Profissional",
@@ -95,7 +103,17 @@
       "petisco": "Petisco"
     },
     "delete_confirm": "Excluir post?",
-    "edit_post": "Editar Post"
+    "edit_post": "Editar Post",
+    "create_post": "Criar Post",
+    "no_posts": "Nenhum post ainda",
+    "reacted_with": "reagiu com",
+    "to_your_post": "ao seu post",
+    "commented_on_post": "comentou no seu post",
+    "comment_added": "Comentário adicionado!",
+    "comment_error": "Erro ao comentar",
+    "login_to_comment": "Faça login para comentar",
+    "post_deleted": "Post excluído",
+    "post_edited": "Post editado"
   },
   "health": {
     "title": "Prontuário de Saúde",
@@ -150,6 +168,14 @@
     "bio": "Bio",
     "edit_profile": "Editar Perfil",
     "professional_profile": "Perfil Profissional",
-    "pet_not_found": "Pet não encontrado"
+    "pet_not_found": "Pet não encontrado",
+    "years": "anos",
+    "guardian": "Guardião",
+    "started_following": "começou a seguir você",
+    "sent_hug": "enviou um abraço",
+    "sent_paw": "enviou uma patinha",
+    "sent_treat": "enviou um petisco",
+    "unfollow": "Deixar de seguir",
+    "follow": "Seguir"
   }
 }

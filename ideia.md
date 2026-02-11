@@ -1,0 +1,1 @@
+No seu pitch na Wellfound, não diga apenas "é um app de pets". Diga: "Uma plataforma de infraestrutura de dados pet com prontuário médico criptografado, rede social de nicho e motor de marketplace geolocalizado."

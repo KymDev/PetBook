@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 	import { z } from "zod";
 	import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-	import { Loader2, Upload, PawPrint, Save, Trash2 } from "lucide-react";
+	import { Loader2, Upload, PawPrint, Save, Trash2, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const petSchema = z.object({
@@ -58,6 +58,7 @@ const EditPet = () => {
     guardian_name: "",
     guardian_instagram_username: "",
   });
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     const petToEdit = myPets.find(p => p.id === petId);
@@ -72,6 +73,9 @@ const EditPet = () => {
         guardian_name: petToEdit.guardian_name,
         guardian_instagram_username: petToEdit.guardian_instagram_username,
       });
+      if (petToEdit.latitude && petToEdit.longitude) {
+        setLocation({ lat: petToEdit.latitude, lng: petToEdit.longitude });
+      }
       setAvatarUrl(petToEdit.avatar_url);
       setLoading(false);
     } else if (petId) {
@@ -175,6 +179,8 @@ const EditPet = () => {
         avatar_url: finalAvatarUrl,
         guardian_name: form.guardian_name,
         guardian_instagram_username: form.guardian_instagram_username.replace("@", ""),
+        latitude: location?.lat,
+        longitude: location?.lng,
       }).eq("id", petId).eq("user_id", user.id); // Garante que só o dono edita
 
       if (error) throw error;
@@ -387,6 +393,28 @@ const EditPet = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Localização (Opcional)</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={async () => {
+                    try {
+                      const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
+                      setLocation({lat: pos.coords.latitude, lng: pos.coords.longitude});
+                      toast({title: "Localização obtida!"});
+                    } catch (e) {
+                      toast({title: "Erro ao obter localização", variant: "destructive"});
+                    }
+                  }}
+                >
+                  <MapPin className="h-4 w-4" />
+                  {location ? `✓ Localização Definida` : "Usar minha localização atual"}
+                </Button>
+                <p className="text-[10px] text-muted-foreground">Isso ajuda a encontrar pets perdidos e locais próximos.</p>
               </div>
 
 	              <Button

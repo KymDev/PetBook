@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X as CloseIcon, Share2 as ShareIcon } from "lucide-react";
+import { X as CloseIcon, Share2 as ShareIcon, ChevronLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface MediaLightboxProps {
   isOpen: boolean;
@@ -34,11 +35,11 @@ export const MediaLightbox = ({
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
-      // Previne que o estado do histórico seja alterado de forma que o 'back' feche a app
+      // Adiciona um estado no histórico para que o botão voltar feche o lightbox
       window.history.pushState({ lightbox: true }, "");
     }
 
-    const handlePopState = () => {
+    const handlePopState = (e: PopStateEvent) => {
       if (isOpen) {
         onClose();
       }
@@ -75,8 +76,6 @@ export const MediaLightbox = ({
 
   const handleClose = (open: boolean) => {
     if (!open) {
-      // Se o usuário fechar manualmente (clicando fora ou no X), 
-      // removemos o estado que adicionamos no histórico para não quebrar o 'voltar' do navegador
       if (window.history.state?.lightbox) {
         window.history.back();
       }
@@ -86,24 +85,36 @@ export const MediaLightbox = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-screen-lg w-full h-screen md:h-auto md:max-h-[90vh] p-0 border-0 bg-black/90 backdrop-blur-md flex flex-col focus:outline-none outline-none">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10 z-50">
-          <div className="flex-1">
-            {petName && (
-              <h2 className="text-white font-semibold text-lg">{petName}</h2>
-            )}
-            {description && (
-              <p className="text-white/70 text-sm mt-1 line-clamp-1">{description}</p>
-            )}
+      <DialogContent className={cn(
+        "max-w-none w-full h-full p-0 border-0 bg-black/95 flex flex-col focus:outline-none outline-none z-[100]",
+        "animate-in fade-in zoom-in-95 duration-200"
+      )}>
+        {/* Header - Estilo Instagram */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] z-[110] bg-gradient-to-b from-black/60 to-transparent">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleClose(false)}
+              className="text-white hover:bg-white/10 rounded-full h-10 w-10"
+            >
+              <ChevronLeft size={28} />
+            </Button>
+            <div>
+              {petName && (
+                <h2 className="text-white font-bold text-base leading-tight">{petName}</h2>
+              )}
+              {description && (
+                <p className="text-white/70 text-xs mt-0.5 line-clamp-1 max-w-[200px]">{description}</p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleShare}
-              className="text-white hover:bg-white/10 rounded-full"
-              title="Compartilhar"
+              className="text-white hover:bg-white/10 rounded-full h-10 w-10"
             >
               <ShareIcon size={20} />
             </Button>
@@ -111,8 +122,7 @@ export const MediaLightbox = ({
               variant="ghost"
               size="icon"
               onClick={() => handleClose(false)}
-              className="text-white hover:bg-white/10 rounded-full"
-              title="Fechar (ESC)"
+              className="text-white hover:bg-white/10 rounded-full h-10 w-10"
             >
               <CloseIcon size={20} />
             </Button>
@@ -120,10 +130,10 @@ export const MediaLightbox = ({
         </div>
 
         {/* Media Container */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden bg-black/50 relative">
+        <div className="flex-1 flex items-center justify-center overflow-hidden relative">
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white"></div>
             </div>
           )}
 
@@ -140,6 +150,7 @@ export const MediaLightbox = ({
               src={mediaUrl}
               controls
               autoPlay
+              playsInline
               className="max-w-full max-h-full object-contain"
               onLoadedData={() => setIsLoading(false)}
               onError={() => setIsLoading(false)}
@@ -147,10 +158,13 @@ export const MediaLightbox = ({
           )}
         </div>
 
-        {/* Footer Info */}
+        {/* Footer Info - Estilo Instagram */}
         {description && (
-          <div className="p-4 border-t border-white/10 bg-black/30 backdrop-blur-sm">
-            <p className="text-white/80 text-sm">{description}</p>
+          <div className="absolute bottom-0 left-0 right-0 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-black/80 via-black/40 to-transparent z-[110]">
+            <p className="text-white text-sm leading-relaxed max-h-[30vh] overflow-y-auto pr-2">
+              <span className="font-bold mr-2">{petName}</span>
+              {description}
+            </p>
           </div>
         )}
       </DialogContent>

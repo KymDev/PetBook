@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePet, Pet } from "@/contexts/PetContext";
@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { MediaLightbox } from "./MediaLightbox";
 
 // Usando lucide-react padrão para ícones
-import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, PawPrint } from "lucide-react";
+import { MoreVertical as MoreIcon, Edit as EditIcon, Trash2 as TrashIcon, MessageCircle as CommentIcon, Send as SendIcon, PawPrint, Play } from "lucide-react";
 
 interface Post {
   id: string;
@@ -64,6 +64,8 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState(post.description || "");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPaused, setIsPaused] = useState(true);
 
   const reactionTypes = [
     { type: "patinha", emoji: "🐾", label: t("feed.reactions.patinha") },
@@ -90,6 +92,28 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       fetchPet();
     }
   }, [post.id, interactorId]);
+
+  useEffect(() => {
+    if (post.type === 'video' && videoRef.current) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              videoRef.current?.play().catch(() => {});
+              setIsPaused(false);
+            } else {
+              videoRef.current?.pause();
+              setIsPaused(true);
+            }
+          });
+        },
+        { threshold: 0.6 }
+      );
+
+      observer.observe(videoRef.current);
+      return () => observer.disconnect();
+    }
+  }, [post.type, post.media_url]);
 
   const fetchPet = async () => {
     const { data } = await supabase
@@ -180,6 +204,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       type: type,
       message: message,
       is_read: false,
+      related_post_id: post.id
     };
 
     if (isOwnerProfessional) {
@@ -189,7 +214,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
     }
 
     if (isProfessional && user) {
-      // Professional author logic
+      notificationData.author_user_id = user.id;
     } else if (currentPet) {
       notificationData.related_pet_id = currentPet.id;
     }
@@ -306,134 +331,167 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                <MoreIcon size={18} />
+                <MoreIcon className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl">
-              <DropdownMenuItem onClick={() => setIsEditing(true)} className="gap-2">
-                <EditIcon size={14} /> {t("common.edit")}
+            <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                <EditIcon className="h-4 w-4 mr-2" /> {t("common.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDeletePost} className="gap-2 text-red-600">
-                <TrashIcon size={14} /> {t("common.delete")}
+              <DropdownMenuItem onClick={handleDeletePost} className="text-destructive">
+                <TrashIcon className="h-4 w-4 mr-2" /> {t("common.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </CardHeader>
 
-      <CardContent className="glass-content p-0 border-b border-white/20 dark:border-white/10">
+      <CardContent className="p-0">
         {isEditing ? (
           <div className="p-4 space-y-3">
             <Input 
               value={editedDescription} 
               onChange={(e) => setEditedDescription(e.target.value)}
-              className="rounded-xl glass-blur-sm"
+              className="rounded-xl"
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleEditPost} className="rounded-xl">{t("common.save")}</Button>
-              <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="rounded-xl">{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleEditPost} className="gradient-bg">
+                {t("common.save")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                {t("common.cancel")}
+              </Button>
             </div>
           </div>
         ) : (
-          post.description && <p className="px-4 pb-3 text-sm leading-relaxed text-foreground/90">{post.description}</p>
-        )}
-        
-        {post.media_url && (
-          <div className="relative aspect-square md:aspect-video bg-muted overflow-hidden rounded-2xl cursor-pointer group" onClick={() => setLightboxOpen(true)}>
-            {post.type === 'video' ? (
-              <>
-                <video 
-                  src={post.media_url} 
-                  className="w-full h-full object-cover"
-                  playsInline
-                  autoPlay
-                  muted
-                  loop
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
-                  <div className="bg-white/90 group-hover:bg-white transition-all duration-300 rounded-full p-3 opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-transform">
-                    <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <img 
-                  src={post.media_url} 
-                  alt="Post" 
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center" />
-              </>
+          <>
+            {post.description && (
+              <p className="px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+                {post.description}
+              </p>
             )}
-          </div>
+            {post.media_url && (
+              <div 
+                className="relative aspect-square md:aspect-video w-full overflow-hidden cursor-pointer group"
+                onClick={() => setLightboxOpen(true)}
+              >
+                {post.type === 'video' ? (
+                  <div className="relative w-full h-full">
+                    <video 
+                      ref={videoRef}
+                      src={post.media_url} 
+                      className="w-full h-full object-cover"
+                      loop
+                      muted
+                      playsInline
+                    />
+                    {isPaused && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+                        <div className="bg-white/20 backdrop-blur-md p-4 rounded-full border border-white/30">
+                          <Play className="h-8 w-8 text-white fill-white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <img 
+                    src={post.media_url} 
+                    alt="Post media" 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+              </div>
+            )}
+          </>
         )}
       </CardContent>
 
-      <CardFooter className="glass-footer flex flex-col p-0 border-t border-white/20 dark:border-white/10">
-        <div className="flex items-center justify-between w-full px-2 py-1 border-b border-white/10 dark:border-white/5">
-          <div className="flex items-center gap-1">
-            {reactionTypes.map((rt) => (
-              <Button
-                key={rt.type}
-                variant="ghost"
-                size="sm"
-                onClick={() => handleReaction(rt.type)}
-                className={cn(
-                  "h-9 px-2 gap-1.5 rounded-full transition-all",
-                  userReactionType === rt.type ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <span className="text-lg">{rt.emoji}</span>
-                <span className="text-xs">{reactions.find(r => r.type === rt.type)?.count || 0}</span>
-              </Button>
-            ))}
+      <CardFooter className="flex flex-col p-0">
+        <div className="flex items-center justify-between w-full px-2 py-1 md:px-4 md:py-2 border-t border-white/20 dark:border-white/10">
+          <div className="flex items-center gap-1 md:gap-2">
+            {reactionTypes.map((rt) => {
+              const reaction = reactions.find(r => r.type === rt.type);
+              return (
+                <Button
+                  key={rt.type}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleReaction(rt.type)}
+                  className={cn(
+                    "h-8 md:h-9 px-2 md:px-3 rounded-full gap-1.5 transition-all duration-300",
+                    reaction?.hasReacted 
+                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <span className="text-base md:text-lg leading-none">{rt.emoji}</span>
+                  {reaction && reaction.count > 0 && (
+                    <span className="text-xs font-bold">{reaction.count}</span>
+                  )}
+                </Button>
+              );
+            })}
           </div>
+
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => setShowComments(!showComments)}
-            className="h-9 px-3 gap-2 rounded-full text-muted-foreground"
+            className={cn(
+              "h-8 md:h-9 px-3 rounded-full gap-2 transition-all duration-300",
+              showComments ? "bg-muted" : "hover:bg-muted"
+            )}
           >
-            <CommentIcon size={18} />
+            <CommentIcon className="h-4 w-4" />
             <span className="text-xs font-bold">{comments.length}</span>
           </Button>
         </div>
 
         {showComments && (
-          <div className="w-full px-4 py-3 glass-layer-1 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex gap-2">
-              <Input 
-                placeholder={t("feed.write_comment")}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-                className="h-9 text-xs rounded-full glass-blur-sm bg-white/50 dark:bg-white/10 border-white/30 dark:border-white/15"
-              />
-              <Button size="icon" onClick={handleComment} className="h-9 w-9 rounded-full shrink-0">
-                <SendIcon size={14} />
-              </Button>
-            </div>
-
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+          <div className="w-full px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="space-y-3 pt-2">
               {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-2">
-                  <Avatar className="h-7 w-7 shrink-0">
-                    <AvatarImage src={comment.pet?.avatar_url || comment.user_profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                      {(comment.pet?.name || comment.user_profile?.full_name || "?")[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 glass-card-light p-2 rounded-2xl rounded-tl-none shadow-sm">
-                    <p className="text-[11px] font-bold mb-0.5">
-                      {comment.pet?.name || comment.user_profile?.full_name}
-                    </p>
-                    <p className="text-xs text-foreground/90 leading-snug">{comment.text}</p>
+                <div key={comment.id} className="flex gap-3">
+                  <Link to={comment.pet_id ? `/pet/${comment.pet_id}` : "#"}>
+                    <Avatar className="h-8 w-8 border border-border">
+                      <AvatarImage src={comment.pet?.avatar_url || comment.user_profile?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-muted text-[10px]">
+                        {(comment.pet?.name || comment.user_profile?.full_name || "?")[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="flex-1 bg-muted/50 rounded-2xl px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold">
+                        {comment.pet?.name || comment.user_profile?.full_name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: getDateLocale() })}
+                      </p>
+                    </div>
+                    <p className="text-sm mt-0.5">{comment.text}</p>
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Input
+                placeholder={t("feed.write_comment")}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleComment()}
+                className="rounded-full bg-muted/50 border-0 focus-visible:ring-primary h-9 text-sm"
+              />
+              <Button 
+                size="icon" 
+                onClick={handleComment}
+                disabled={!newComment.trim()}
+                className="h-9 w-9 rounded-full gradient-bg shrink-0"
+              >
+                <SendIcon className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
@@ -441,13 +499,13 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
     </Card>
 
     {post.media_url && (
-      <MediaLightbox
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-        mediaUrl={post.media_url}
+      <MediaLightbox 
+        isOpen={lightboxOpen} 
+        onClose={() => setLightboxOpen(false)} 
+        mediaUrl={post.media_url} 
         mediaType={post.type === 'video' ? 'video' : 'image'}
         petName={pet?.name}
-        description={post.description}
+        description={post.description || undefined}
       />
     )}
     </>
