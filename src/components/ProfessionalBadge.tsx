@@ -1,5 +1,6 @@
 import { Briefcase, BadgeCheck, Shield, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface ProfessionalBadgeProps {
   isProfessional: boolean;
@@ -16,6 +17,7 @@ export const ProfessionalBadge = ({
   showText = true,
   className,
 }: ProfessionalBadgeProps) => {
+  const { t } = useTranslation();
   if (!isProfessional) return null;
 
   const isHealthProfessional = serviceType === 'veterinario';
@@ -67,7 +69,7 @@ export const ProfessionalBadge = ({
           isHealthProfessional ? "text-blue-700" : "text-secondary-foreground",
           textSizeClasses[size]
         )}>
-          {isHealthProfessional ? "Profissional de Saúde Pet" : "Profissional"}
+          {isHealthProfessional ? t("badges.pet_health_professional") : t("badges.professional")}
         </span>
       )}
       <BadgeCheck className={cn(isHealthProfessional ? "text-blue-600" : "text-secondary", {
@@ -107,6 +109,7 @@ export const ProfessionalVerifiedBadge = ({
   size?: "sm" | "md" | "lg";
   variant?: "default" | "minimal";
 }) => {
+  const { t } = useTranslation();
   if (!isProfessional) return null;
   const isHealthProfessional = serviceType === 'veterinario';
 
@@ -136,7 +139,7 @@ export const ProfessionalVerifiedBadge = ({
     )}>
       <BadgeCheck className={cn(isHealthProfessional ? "text-blue-600" : "text-secondary", sizeClasses[size])} />
       <span className={cn("text-xs font-semibold", isHealthProfessional ? "text-blue-700" : "text-secondary")}>
-        {isHealthProfessional ? "Saúde Verificada" : "Verificado"}
+        {isHealthProfessional ? t("badges.verified_health") : t("badges.verified")}
       </span>
     </div>
   );

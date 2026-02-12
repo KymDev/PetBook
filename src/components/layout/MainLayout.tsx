@@ -174,7 +174,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     if (!deletePassword) {
       toast({
         title: t("common.error"),
-        description: t("auth.password_required") || "Senha necessária",
+        description: t("auth.password_required"),
         variant: "destructive",
       });
       return;
@@ -192,7 +192,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     } else {
       toast({
         title: t("modals.delete_success"),
-        description: t("modals.account_deleted_desc") || "Sua conta foi removida.",
+        description: t("modals.account_deleted_desc"),
       });
       setIsDeleteAccountOpen(false);
       navigate("/auth");
@@ -206,7 +206,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       await deletePet(petToDelete.id);
       toast({
         title: t("modals.delete_success"),
-        description: `${petToDelete.name} foi removido com sucesso.`,
+        description: t("modals.delete_pet_success_desc", { name: petToDelete.name }) || `${petToDelete.name} was removed successfully.`,
       });
     } catch (error: any) {
       toast({
@@ -370,7 +370,6 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                       </Link>
                     </DropdownMenuItem>
                     
-                    {/* Outros Pets */}
                     {myPets && myPets.length > 1 && (
                       <>
                         <DropdownMenuSeparator />
@@ -423,62 +422,65 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       </header>
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-[calc(3rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-between px-4">
-        <Link to="/feed" className="flex-shrink-0">
-          <PetBookLogo size="sm" />
-        </Link>
-        <div className="flex items-center gap-1">
-          <Link to="/notifications" className="relative p-2">
-            <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
+      <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border bg-background/95 backdrop-blur-lg md:hidden">
+        <div className="container flex h-full items-center justify-between px-4">
+          <Link to="/feed" className="flex-shrink-0">
+            <PetBookLogo size="sm" />
           </Link>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                <Plus className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>{t("common.create_new")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/create-post" className="flex items-center gap-2">
-                  <PlusSquare className="h-4 w-4" />
-                  {t("common.new_post")}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/create-story" className="flex items-center gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  {t("common.new_story")}
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Link to="/services" className="p-2">
-            <Stethoscope className={cn("h-5 w-5", location.pathname === "/services" && "fill-current")} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/notifications" className="relative p-2">
+              <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>{t("common.create_new")}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/create-post" className="flex items-center gap-2">
+                    <PlusSquare className="h-4 w-4" />
+                    {t("common.new_post")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/create-story" className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4" />
+                    {t("common.new_story")}
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link to="/services" className="p-2">
+              <Stethoscope className={cn("h-5 w-5", location.pathname === "/services" && "fill-current")} />
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="pt-[calc(3rem+env(safe-area-inset-top))] md:pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 min-h-screen">
-        {children}
+      {/* Main Content */}
+      <main className="pt-12 md:pt-14 pb-16 md:pb-0 min-h-screen">
+        <div className="container px-4 py-4 max-w-6xl mx-auto">
+          {children}
+        </div>
       </main>
 
-      {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] border-t border-border bg-background/95 backdrop-blur-lg md:hidden flex items-center justify-around px-2">
+      {/* Mobile Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-border bg-background/95 backdrop-blur-lg flex items-center justify-around px-2 md:hidden">
         {navItems.map((item) => (
           <Link
             key={item.href}
             to={item.href}
             className={cn(
-              "flex flex-col items-center justify-center w-full h-full transition-all",
+              "flex flex-col items-center justify-center min-w-[64px] transition-all",
               location.pathname === item.href
                 ? "text-primary"
                 : "text-muted-foreground"
@@ -494,10 +496,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <button 
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full transition-all outline-none",
-                (location.pathname.startsWith("/pet/") && !location.pathname.endsWith("/health")) || location.pathname === "/professional-profile"
+                "flex flex-col items-center justify-center min-w-[64px] transition-all",
+                location.pathname.startsWith("/pet/") || location.pathname.startsWith("/professional-")
                   ? "text-primary"
                   : "text-muted-foreground"
               )}
@@ -679,7 +681,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("menu.delete_pet")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Selecione o pet que deseja excluir:
+              {t("menu.select_pet_to_delete")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 max-h-60 overflow-y-auto py-2">

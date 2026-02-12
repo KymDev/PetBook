@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface PetBookLogoProps {
   className?: string;
@@ -7,6 +8,7 @@ interface PetBookLogoProps {
 }
 
 export const PetBookLogo = ({ className, size = "md", showText = true }: PetBookLogoProps) => {
+  const { t } = useTranslation();
   const sizes = {
     sm: "w-8 h-8",
     md: "w-12 h-12",
@@ -40,7 +42,7 @@ export const PetBookLogo = ({ className, size = "md", showText = true }: PetBook
         <div className="flex flex-col">
           <span className="font-heading font-bold text-xl gradient-text">PetBook</span>
           {size !== "sm" && (
-            <span className="text-xs text-muted-foreground">A rede social do seu melhor amigo</span>
+            <span className="text-xs text-muted-foreground">{t("auth.tagline")}</span>
           )}
         </div>
       )}

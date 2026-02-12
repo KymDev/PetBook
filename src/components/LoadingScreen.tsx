@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { PetBookLogo } from "./PetBookLogo";
+import { useTranslation } from "react-i18next";
 
 interface LoadingScreenProps {
   message?: string;
@@ -7,9 +8,12 @@ interface LoadingScreenProps {
 }
 
 export function LoadingScreen({
-  message = "Carregando seu PetBook...",
+  message,
   fullScreen = true,
 }: LoadingScreenProps) {
+  const { t } = useTranslation();
+  const displayMessage = message || t("common.loading_pet");
+
   return (
     <div
       className={cn(
@@ -37,7 +41,7 @@ export function LoadingScreen({
 
       {/* Mensagem */}
       <p className="mt-8 text-lg font-medium text-foreground z-10 flex items-center gap-1">
-        {message}
+        {displayMessage}
         <span className="inline-flex ml-1">
           <span className="animate-dot-1">.</span>
           <span className="animate-dot-2">.</span>

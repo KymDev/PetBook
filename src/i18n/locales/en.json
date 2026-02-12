@@ -21,7 +21,10 @@
     "email_already_registered_desc": "This email is already in use. Try logging in.",
     "tagline": "The social network for you and your pet",
     "professional_signup": "Professional Signup",
-    "guardian_signup": "Guardian Signup"
+    "guardian_signup": "Guardian Signup",
+    "login_required": "Login required",
+    "login_to_react": "Login to react to posts",
+    "password_required": "Password required"
   },
   "common": {
     "loading": "Loading...",
@@ -51,17 +54,39 @@
     "save": "Save",
     "back": "Back",
     "success": "Success",
+    "edit": "Edit",
     "search": "Search",
     "no_results": "No results found",
     "see_more": "See more",
     "see_less": "See less",
     "optional": "Optional",
-    "required": "Required"
+    "required": "Required",
+    "action_required": "Action required",
+    "professional": "Professional",
+    "pet": "Pet",
+    "location_hub": "Location Hub",
+    "map": "Map",
+    "beta_version": "Beta Version",
+    "made_with_heart": "Made with ❤️ for all pets",
+    "welcome_to_petbook": "Welcome to PetBook",
+    "active_community": "Active community",
+    "active_community_desc": "Share experiences with thousands of animal-loving guardians.",
+    "more_than_10_species": "+10 species",
+    "more_than_10_species_desc": "Dogs, cats, birds, rodents, and many other pets are welcome here.",
+    "share_experiences": "Share experiences",
+    "share_experiences_desc": "Record and share your pet's routine, play, and evolution.",
+    "dogs": "Dogs",
+    "cats": "Cats",
+    "birds": "Birds",
+    "rodents": "Rodents",
+    "user": "User",
+    "verified": "Verified"
   },
   "landing": {
     "hero_title": "Your pet's world in one place",
     "hero_subtitle": "The complete platform to care for, connect, and protect the ones you love most. Available for Web, Android, and iOS.",
-    "start_now": "Login",
+    "start_now": "Get Started Now",
+    "login": "Login",
     "download_app": "Download App",
     "features_title": "Everything your pet needs",
     "feature_map_title": "Lost Pet Map",
@@ -76,7 +101,23 @@
     "download_android_desc": "Stable APK version",
     "download_ios_desc": "Coming soon",
     "download_web_desc": "Instant access",
-    "footer_rights": "© 2026 PetBook. All rights reserved."
+    "footer_rights": "© 2026 PetBook. All rights reserved.",
+    "about_us": "About Us",
+    "features": "Features",
+    "for_companies": "For Companies",
+    "blog": "Blog",
+    "legal": "Legal",
+    "terms_of_use": "Terms of Use",
+    "privacy_policy": "Privacy Policy",
+    "cookies": "Cookies",
+    "contact": "Contact",
+    "access_now": "Access Now",
+    "download_safe_apk": "Download Safe APK",
+    "available_soon": "Available soon"
+  },
+  "update": {
+    "title": "New Version Available!",
+    "button": "Update Now"
   },
   "menu": {
     "professional_panel": "Professional Panel",
@@ -87,7 +128,23 @@
     "delete_pet": "Delete Pet",
     "delete_account": "Delete Account",
     "my_pets": "My Pets",
-    "account_settings": "Account Settings"
+    "account_settings": "Account Settings",
+    "select_pet_to_delete": "Select the pet you want to delete:",
+    "switch_account_title": "Switch Account Type",
+    "switch_account_description": "Switch between user and professional account to access different features.",
+    "account_mode": "Account Mode",
+    "professional_mode_desc": "Manage your services and clients",
+    "user_mode_desc": "Browse and find services for your pet",
+    "switch_to_user": "Switch to User",
+    "switch_to_professional": "Switch to Professional",
+    "account_not_verified": "Account not verified",
+    "account_not_verified_desc": "Complete your professional profile and wait for verification to appear in the service directory.",
+    "user_mode_features": "Find services, create posts, connect with other pets",
+    "professional_mode_features": "Offer services, manage clients, appear in the directory",
+    "account_switched_success": "Account switched successfully!",
+    "account_switched_desc": "You are now in {{mode}} mode.",
+    "account_switch_error": "Error switching account",
+    "account_switch_error_desc": "Please try again later."
   },
   "modals": {
     "delete_pet_title": "Delete Pet",
@@ -96,7 +153,8 @@
     "delete_account_description": "Are you sure you want to delete your account? All your data and pets will be permanently removed. Enter your password to confirm.",
     "delete_account_password_placeholder": "Your password",
     "delete_success": "Deleted successfully",
-    "delete_error": "Error deleting"
+    "delete_error": "Error deleting",
+    "account_deleted_desc": "Your account has been removed."
   },
   "languages": {
     "title": "Language",
@@ -115,7 +173,17 @@
       "petisco": "Treat"
     },
     "delete_confirm": "Delete post?",
-    "edit_post": "Edit Post"
+    "edit_post": "Edit Post",
+    "create_post": "Create Post",
+    "no_posts": "No posts yet",
+    "reacted_with": "reacted with",
+    "to_your_post": "to your post",
+    "commented_on_post": "commented on your post",
+    "comment_added": "Comment added!",
+    "comment_error": "Error commenting",
+    "login_to_comment": "Login to comment",
+    "post_deleted": "Post deleted",
+    "post_edited": "Post edited"
   },
   "health": {
     "title": "Health Records",
@@ -170,6 +238,20 @@
     "bio": "Bio",
     "edit_profile": "Edit Profile",
     "professional_profile": "Professional Profile",
-    "pet_not_found": "Pet not found"
+    "pet_not_found": "Pet not found",
+    "years": "years",
+    "guardian": "Guardian",
+    "started_following": "started following you",
+    "sent_hug": "sent a hug",
+    "sent_paw": "sent a paw",
+    "sent_treat": "sent a treat",
+    "unfollow": "Unfollow",
+    "follow": "Follow"
+  },
+  "badges": {
+    "pet_health_professional": "Pet Health Professional",
+    "professional": "Professional",
+    "verified_health": "Verified Health",
+    "verified": "Verified"
   }
 }

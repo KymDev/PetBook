@@ -23,7 +23,8 @@
     "professional_signup": "Cadastro Profissional",
     "guardian_signup": "Cadastro de Guardião",
     "login_required": "Login necessário",
-    "login_to_react": "Faça login para reagir aos posts"
+    "login_to_react": "Faça login para reagir aos posts",
+    "password_required": "Senha necessária"
   },
   "common": {
     "loading": "Carregando...",
@@ -38,7 +39,7 @@
     "create_new": "Criar novo",
     "new_post": "Novo Post",
     "new_story": "Novo Story",
-    "services": "Servicios",
+    "services": "Serviços",
     "panel": "Painel",
     "no_posts_yet": "Nenhum post ainda",
     "follow_new_pets": "Siga novos pets ou compartilhe algo!",
@@ -64,13 +65,29 @@
     "professional": "Profissional",
     "pet": "Pet",
     "location_hub": "Hub de Localização",
-    "map": "Mapa"
+    "map": "Mapa",
+    "beta_version": "Versão Beta",
+    "made_with_heart": "Feito com ❤️ para todos os pets",
+    "welcome_to_petbook": "Bem-vindo ao PetBook",
+    "active_community": "Comunidade ativa",
+    "active_community_desc": "Compartilhe experiências com milhares de tutores apaixonados por animais.",
+    "more_than_10_species": "+10 espécies",
+    "more_than_10_species_desc": "Cães, gatos, pássaros, roedores e muitos outros pets são bem-vindos aqui.",
+    "share_experiences": "Compartilhe experiências",
+    "share_experiences_desc": "Registre e compartilhe a rotina, as brincadeiras e a evolução do seu pet.",
+    "dogs": "Cães",
+    "cats": "Gatos",
+    "birds": "Pássaros",
+    "rodents": "Roedores",
+    "user": "Usuário",
+    "verified": "Verificado"
   },
   "landing": {
     "hero_title": "O mundo do seu pet em um só lugar",
     "hero_subtitle": "A plataforma completa para cuidar, conectar e proteger quem você mais ama. Disponível para Web, Android e iOS.",
-    "start_now": "Entrar",
-    "download_app": "Baixar App",
+    "start_now": "Começar Agora",
+    "login": "Entrar",
+    "download_app": "Download do App",
     "features_title": "Tudo o que seu pet precisa",
     "feature_map_title": "Mapa de Pets Perdidos",
     "feature_map_desc": "Alertas em tempo real para ajudar a encontrar pets desaparecidos na sua região.",
@@ -82,9 +99,21 @@
     "startup_desc": "Nascemos da paixão pelos animais e da necessidade de centralizar todos os cuidados em um só lugar. Nossa missão é fortalecer o vínculo entre pets e seus tutores através da tecnologia.",
     "download_title": "Leve o PetBook com você",
     "download_android_desc": "Versão APK estável",
-    "download_ios_desc": "Disponível em breve",
+    "download_ios_desc": "Em breve",
     "download_web_desc": "Acesso instantâneo",
-    "footer_rights": "© 2026 PetBook. Todos os direitos reservados."
+    "footer_rights": "© 2026 PetBook. Todos os direitos reservados.",
+    "about_us": "Sobre Nós",
+    "features": "Funcionalidades",
+    "for_companies": "Para Empresas",
+    "blog": "Blog",
+    "legal": "Legal",
+    "terms_of_use": "Termos de Uso",
+    "privacy_policy": "Política de Privacidade",
+    "cookies": "Cookies",
+    "contact": "Contato",
+    "access_now": "Acessar Agora",
+    "download_safe_apk": "Baixar APK Seguro",
+    "available_soon": "Em breve"
   },
   "update": {
     "title": "Nova Versão Disponível!",
@@ -99,7 +128,23 @@
     "delete_pet": "Excluir Pet",
     "delete_account": "Excluir Conta",
     "my_pets": "Meus Pets",
-    "account_settings": "Configurações da Conta"
+    "account_settings": "Configurações da Conta",
+    "select_pet_to_delete": "Selecione o pet que deseja excluir:",
+    "switch_account_title": "Alternar Tipo de Conta",
+    "switch_account_description": "Mude entre conta de usuário e profissional para acessar recursos diferentes.",
+    "account_mode": "Modo",
+    "professional_mode_desc": "Gerencie seus serviços e clientes",
+    "user_mode_desc": "Navegue e encontre serviços para seu pet",
+    "switch_to_user": "Alternar para Usuário",
+    "switch_to_professional": "Alternar para Profissional",
+    "account_not_verified": "Conta não verificada",
+    "account_not_verified_desc": "Complete seu perfil profissional e aguarde a verificação para aparecer no diretório de serviços.",
+    "user_mode_features": "Encontre serviços, crie posts, conecte-se com outros pets",
+    "professional_mode_features": "Ofereça serviços, gerencie clientes, apareça no diretório",
+    "account_switched_success": "Conta alternada com sucesso!",
+    "account_switched_desc": "Você está agora no modo {{mode}}.",
+    "account_switch_error": "Erro ao alternar conta",
+    "account_switch_error_desc": "Tente novamente mais tarde."
   },
   "modals": {
     "delete_pet_title": "Excluir Pet",
@@ -108,7 +153,8 @@
     "delete_account_description": "Tem certeza que deseja excluir sua conta? Todos os seus dados e pets serão removidos permanentemente. Digite sua senha para confirmar.",
     "delete_account_password_placeholder": "Sua senha",
     "delete_success": "Excluído com sucesso",
-    "delete_error": "Erro ao excluir"
+    "delete_error": "Erro ao excluir",
+    "account_deleted_desc": "Sua conta foi removida."
   },
   "languages": {
     "title": "Idioma",
@@ -201,5 +247,11 @@
     "sent_treat": "enviou um petisco",
     "unfollow": "Deixar de seguir",
     "follow": "Seguir"
+  },
+  "badges": {
+    "pet_health_professional": "Profissional de Saúde Pet",
+    "professional": "Profissional",
+    "verified_health": "Saúde Verificada",
+    "verified": "Verificado"
   }
 }
