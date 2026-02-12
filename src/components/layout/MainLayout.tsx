@@ -421,9 +421,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </header>
 
-      {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border bg-background/95 backdrop-blur-lg md:hidden">
-        <div className="container flex h-full items-center justify-between px-4">
+      {/* Mobile Header - Adjusted for Safe Area */}
+      <header className="fixed top-0 left-0 right-0 z-50 pt-safe border-b border-border bg-background/95 backdrop-blur-lg md:hidden">
+        <div className="container flex h-12 items-center justify-between px-4">
           <Link to="/feed" className="flex-shrink-0">
             <PetBookLogo size="sm" />
           </Link>
@@ -466,162 +466,164 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-12 md:pt-14 pb-16 md:pb-0 min-h-screen">
+      {/* Main Content - Adjusted for Safe Area */}
+      <main className="pt-[calc(3rem+env(safe-area-inset-top))] md:pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 min-h-screen">
         <div className="container px-4 py-4 max-w-6xl mx-auto">
           {children}
         </div>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-border bg-background/95 backdrop-blur-lg flex items-center justify-around px-2 md:hidden">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            to={item.href}
-            className={cn(
-              "flex flex-col items-center justify-center min-w-[64px] transition-all",
-              location.pathname === item.href
-                ? "text-primary"
-                : "text-muted-foreground"
-            )}
-          >
-            <item.icon className={cn(
-              item.isSpecial ? "h-6 w-6" : "h-5 w-5",
-              location.pathname === item.href && "fill-current"
-            )} />
-            <span className="text-[10px] mt-1 font-medium">{item.label}</span>
-          </Link>
-        ))}
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button 
+      {/* Mobile Bottom Nav - Adjusted for Safe Area */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe border-t border-border bg-background/95 backdrop-blur-lg flex items-center justify-around px-2 md:hidden">
+        <div className="flex items-center justify-around w-full h-16">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
               className={cn(
                 "flex flex-col items-center justify-center min-w-[64px] transition-all",
-                location.pathname.startsWith("/pet/") || location.pathname.startsWith("/professional-")
+                location.pathname === item.href
                   ? "text-primary"
                   : "text-muted-foreground"
               )}
             >
-              <Avatar className="h-6 w-6 border border-current">
-                {isProfessional ? (
-                  <AvatarImage src={profile?.professional_avatar_url || undefined} />
-                ) : (
-                  <AvatarImage src={currentPet?.avatar_url || undefined} />
+              <item.icon className={cn(
+                item.isSpecial ? "h-6 w-6" : "h-5 w-5",
+                location.pathname === item.href && "fill-current"
+              )} />
+              <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+            </Link>
+          ))}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button 
+                className={cn(
+                  "flex flex-col items-center justify-center min-w-[64px] transition-all",
+                  location.pathname.startsWith("/pet/") || location.pathname.startsWith("/professional-")
+                    ? "text-primary"
+                    : "text-muted-foreground"
                 )}
-                <AvatarFallback className="text-[8px]">
-                  {isProfessional ? (profile?.full_name?.[0] || 'P') : (currentPet?.name?.[0] || 'P')}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-[10px] mt-1 font-medium">{t("common.profile")}</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="w-64 mb-2">
-            <DropdownMenuLabel>{t("common.profile")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            
-            {isProfessional ? (
-              <>
-                <DropdownMenuItem asChild>
-                  <Link to="/professional-dashboard" className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    {t("menu.professional_panel")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/professional-profile" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    {t("common.settings")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSwitchAccount('user')} className="flex items-center gap-2 text-primary">
-                  <UserIcon className="h-4 w-4" />
-                  {t("menu.switch_to_guardian")}
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <>
-                <DropdownMenuItem asChild>
-                  <Link to={currentPet ? `/pet/${currentPet.id}` : "/feed"} className="flex items-center gap-2">
+              >
+                <Avatar className="h-6 w-6 border border-current">
+                  {isProfessional ? (
+                    <AvatarImage src={profile?.professional_avatar_url || undefined} />
+                  ) : (
+                    <AvatarImage src={currentPet?.avatar_url || undefined} />
+                  )}
+                  <AvatarFallback className="text-[8px]">
+                    {isProfessional ? (profile?.full_name?.[0] || 'P') : (currentPet?.name?.[0] || 'P')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-[10px] mt-1 font-medium">{t("common.profile")}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-64 mb-2">
+              <DropdownMenuLabel>{t("common.profile")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              {isProfessional ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/professional-dashboard" className="flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      {t("menu.professional_panel")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/professional-profile" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      {t("common.settings")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSwitchAccount('user')} className="flex items-center gap-2 text-primary">
                     <UserIcon className="h-4 w-4" />
-                    {t("menu.pet_profile")}
-                  </Link>
-                </DropdownMenuItem>
-                
-                {myPets && myPets.length > 1 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{t("menu.my_pets")}</DropdownMenuLabel>
-                    {myPets.map(pet => pet.id !== currentPet?.id && (
-                      <DropdownMenuItem key={pet.id} onClick={() => selectPet(pet.id)} className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={pet.avatar_url || undefined} />
-                          <AvatarFallback className="text-[8px]">{pet.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{pet.name}</span>
+                    {t("menu.switch_to_guardian")}
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to={currentPet ? `/pet/${currentPet.id}` : "/feed"} className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4" />
+                      {t("menu.pet_profile")}
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  {myPets && myPets.length > 1 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{t("menu.my_pets")}</DropdownMenuLabel>
+                      {myPets.map(pet => pet.id !== currentPet?.id && (
+                        <DropdownMenuItem key={pet.id} onClick={() => selectPet(pet.id)} className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={pet.avatar_url || undefined} />
+                            <AvatarFallback className="text-[8px]">{pet.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{pet.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+
+                  <DropdownMenuItem asChild>
+                    <Link to="/create-pet" className="flex items-center gap-2">
+                      <PlusCircle className="h-4 w-4" />
+                      {t("menu.add_pet")}
+                    </Link>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem onClick={() => setIsPetListForDeletionOpen(true)} className="flex items-center gap-2 text-red-600">
+                    <Trash2 className="h-4 w-4" />
+                    {t("menu.delete_pet")}
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem onClick={() => handleSwitchAccount('professional')} className="flex items-center gap-2 text-secondary">
+                    <Briefcase className="h-4 w-4" />
+                    {t("menu.switch_to_professional")}
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="flex items-center gap-2">
+                  <Languages className="h-4 w-4" />
+                  <span>{t("languages.title") || "Idioma"}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="min-w-[140px]">
+                    {languages.map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.code}
+                        onClick={() => changeLanguage(lang.code)}
+                        className={cn(
+                          "gap-3 cursor-pointer",
+                          i18n.language === lang.code && "bg-primary/10 font-bold text-primary"
+                        )}
+                      >
+                        <span className="text-lg">{lang.flag}</span>
+                        <span className="text-sm">{lang.name}</span>
                       </DropdownMenuItem>
                     ))}
-                  </>
-                )}
-
-                <DropdownMenuItem asChild>
-                  <Link to="/create-pet" className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4" />
-                    {t("menu.add_pet")}
-                  </Link>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem onClick={() => setIsPetListForDeletionOpen(true)} className="flex items-center gap-2 text-red-600">
-                  <Trash2 className="h-4 w-4" />
-                  {t("menu.delete_pet")}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => handleSwitchAccount('professional')} className="flex items-center gap-2 text-secondary">
-                  <Briefcase className="h-4 w-4" />
-                  {t("menu.switch_to_professional")}
-                </DropdownMenuItem>
-              </>
-            )}
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-center gap-2">
-                <Languages className="h-4 w-4" />
-                <span>{t("languages.title") || "Idioma"}</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="min-w-[140px]">
-                  {languages.map((lang) => (
-                    <DropdownMenuItem
-                      key={lang.code}
-                      onClick={() => changeLanguage(lang.code)}
-                      className={cn(
-                        "gap-3 cursor-pointer",
-                        i18n.language === lang.code && "bg-primary/10 font-bold text-primary"
-                      )}
-                    >
-                      <span className="text-lg">{lang.flag}</span>
-                      <span className="text-sm">{lang.name}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setIsDeleteAccountOpen(true)} className="flex items-center gap-2 text-red-600">
-              <Trash2 className="h-4 w-4" />
-              {t("menu.delete_account")}
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-              <LogOut className="h-4 w-4 mr-2" />
-              {t("common.logout")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsDeleteAccountOpen(true)} className="flex items-center gap-2 text-red-600">
+                <Trash2 className="h-4 w-4" />
+                {t("menu.delete_account")}
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                <LogOut className="h-4 w-4 mr-2" />
+                {t("common.logout")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </nav>
 
       {/* Modais de Exclusão */}
