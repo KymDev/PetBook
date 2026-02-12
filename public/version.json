@@ -1,0 +1,10 @@
+{
+  "latestVersion": "1.0.1",
+  "minVersion": "1.0.0",
+  "downloadUrl": "https://petbook.com.br/#download",
+  "releaseNotes": {
+    "pt": "Nova versão disponível com melhorias na landing page e correções de bugs.",
+    "en": "New version available with landing page improvements and bug fixes.",
+    "es": "Nueva versión disponible con mejoras en la landing page y correcciones de errores."
+  }
+}

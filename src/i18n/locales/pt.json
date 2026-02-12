@@ -38,7 +38,7 @@
     "create_new": "Criar novo",
     "new_post": "Novo Post",
     "new_story": "Novo Story",
-    "services": "Serviços",
+    "services": "Servicios",
     "panel": "Painel",
     "no_posts_yet": "Nenhum post ainda",
     "follow_new_pets": "Siga novos pets ou compartilhe algo!",
@@ -65,6 +65,30 @@
     "pet": "Pet",
     "location_hub": "Hub de Localização",
     "map": "Mapa"
+  },
+  "landing": {
+    "hero_title": "O mundo do seu pet em um só lugar",
+    "hero_subtitle": "A plataforma completa para cuidar, conectar e proteger quem você mais ama. Disponível para Web, Android e iOS.",
+    "start_now": "Entrar",
+    "download_app": "Baixar App",
+    "features_title": "Tudo o que seu pet precisa",
+    "feature_map_title": "Mapa de Pets Perdidos",
+    "feature_map_desc": "Alertas em tempo real para ajudar a encontrar pets desaparecidos na sua região.",
+    "feature_social_title": "Rede Social Pet",
+    "feature_social_desc": "Compartilhe momentos, fotos e histórias do seu melhor amigo com a comunidade.",
+    "feature_health_title": "Saúde & Bem-estar",
+    "feature_health_desc": "Controle de vacinas, exames e histórico médico completo com QR Code de emergência.",
+    "startup_title": "Sobre a PetBook",
+    "startup_desc": "Nascemos da paixão pelos animais e da necessidade de centralizar todos os cuidados em um só lugar. Nossa missão é fortalecer o vínculo entre pets e seus tutores através da tecnologia.",
+    "download_title": "Leve o PetBook com você",
+    "download_android_desc": "Versão APK estável",
+    "download_ios_desc": "Disponível em breve",
+    "download_web_desc": "Acesso instantâneo",
+    "footer_rights": "© 2026 PetBook. Todos os direitos reservados."
+  },
+  "update": {
+    "title": "Nova Versão Disponível!",
+    "button": "Atualizar Agora"
   },
   "menu": {
     "professional_panel": "Painel Profissional",

@@ -58,6 +58,26 @@
     "optional": "Optional",
     "required": "Required"
   },
+  "landing": {
+    "hero_title": "Your pet's world in one place",
+    "hero_subtitle": "The complete platform to care for, connect, and protect the ones you love most. Available for Web, Android, and iOS.",
+    "start_now": "Login",
+    "download_app": "Download App",
+    "features_title": "Everything your pet needs",
+    "feature_map_title": "Lost Pet Map",
+    "feature_map_desc": "Real-time alerts to help find missing pets in your area.",
+    "feature_social_title": "Pet Social Network",
+    "feature_social_desc": "Share moments, photos, and stories of your best friend with the community.",
+    "feature_health_title": "Health & Well-being",
+    "feature_health_desc": "Vaccine control, exams, and complete medical history with emergency QR Code.",
+    "startup_title": "About PetBook",
+    "startup_desc": "We were born from a passion for animals and the need to centralize all care in one place. Our mission is to strengthen the bond between pets and their guardians through technology.",
+    "download_title": "Take PetBook with you",
+    "download_android_desc": "Stable APK version",
+    "download_ios_desc": "Coming soon",
+    "download_web_desc": "Instant access",
+    "footer_rights": "© 2026 PetBook. All rights reserved."
+  },
   "menu": {
     "professional_panel": "Professional Panel",
     "switch_to_guardian": "Switch to Guardian",

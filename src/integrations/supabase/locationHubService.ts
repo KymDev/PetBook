@@ -34,15 +34,12 @@ export interface PetFriendlyPlace {
 
 export const locationHubService = {
   async getMissingPets() {
-    // Calcula a data de 7 dias atrás
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+    // Busca pets perdidos sem limite de tempo para garantir que apareçam, 
+    // mas ordenados pelos mais recentes.
     const { data, error } = await supabase
       .from("missing_pets")
       .select("*, pet:pet_id(name, avatar_url)")
       .eq("is_found", false)
-      .gt("created_at", sevenDaysAgo.toISOString())
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -93,57 +90,28 @@ export const locationHubService = {
     return data as PetFriendlyPlace[];
   },
 
-  async addPetFriendlyPlace(place: Partial<PetFriendlyPlace>) {
-    const { data, error } = await supabase
-      .from("pet_friendly_places")
-      .insert([place])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as PetFriendlyPlace;
-  },
-
-  async updatePetFriendlyPlace(id: string, place: Partial<PetFriendlyPlace>) {
-    const { data, error } = await supabase
-      .from("pet_friendly_places")
-      .update(place)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as PetFriendlyPlace;
-  },
-
-  async deletePetFriendlyPlace(id: string) {
-    const { error } = await supabase
-      .from("pet_friendly_places")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
-  },
-
   async togglePetFriendlyStatus(place: any, isFriendly: boolean, userId: string) {
-    // Primeiro verifica se o local já existe no nosso banco (se veio do OSM)
+    // Busca por nome e proximidade (latitude/longitude com pequena margem)
+    // para evitar duplicatas de locais do OSM
     const { data: existing } = await supabase
       .from("pet_friendly_places")
       .select("id")
       .eq("name", place.name)
-      .filter("latitude", "eq", place.latitude)
+      .gte("latitude", place.latitude - 0.0001)
+      .lte("latitude", place.latitude + 0.0001)
       .maybeSingle();
 
     if (existing) {
-      return await supabase
+      const { error } = await supabase
         .from("pet_friendly_places")
         .update({ 
           category: isFriendly ? "Pet Friendly" : "Não Aceita Pets",
           rating: isFriendly ? 5 : 1
         })
         .eq("id", existing.id);
+      if (error) throw error;
     } else {
-      return await supabase
+      const { error } = await supabase
         .from("pet_friendly_places")
         .insert([{
           name: place.name,
@@ -152,15 +120,17 @@ export const locationHubService = {
           latitude: place.latitude,
           longitude: place.longitude,
           user_id: userId,
-          rating: isFriendly ? 5 : 1
+          rating: isFriendly ? 5 : 1,
+          address: place.address || ""
         }]);
+      if (error) throw error;
     }
   },
 
   async uploadPetPhoto(file: File) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `missing-pets/${fileName}`;
+    const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('missing_pets')

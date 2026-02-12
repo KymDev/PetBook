@@ -47,6 +47,26 @@
     "delete": "Eliminar",
     "save": "Guardar"
   },
+  "landing": {
+    "hero_title": "El mundo de tu mascota en un solo lugar",
+    "hero_subtitle": "La plataforma completa para cuidar, conectar y proteger a quienes más amas. Disponible para Web, Android e iOS.",
+    "start_now": "Entrar",
+    "download_app": "Descargar App",
+    "features_title": "Todo lo que tu mascota necesita",
+    "feature_map_title": "Mapa de Mascotas Perdidas",
+    "feature_map_desc": "Alertas en tiempo real para ayudar a encontrar mascotas desaparecidas en tu región.",
+    "feature_social_title": "Red Social de Mascotas",
+    "feature_social_desc": "Comparte momentos, fotos e historias de tu mejor amigo con la comunidad.",
+    "feature_health_title": "Salud y Bienestar",
+    "feature_health_desc": "Control de vacunas, exámenes e historial médico completo con código QR de emergencia.",
+    "startup_title": "Sobre PetBook",
+    "startup_desc": "Nacimos de la pasión por los animales y de la necesidad de centralizar todos los cuidados en un solo lugar. Nuestra misión es fortalecer el vínculo entre las mascotas y sus tutores a través de la tecnología.",
+    "download_title": "Lleva PetBook contigo",
+    "download_android_desc": "Versión APK estable",
+    "download_ios_desc": "Disponible pronto",
+    "download_web_desc": "Acceso instantáneo",
+    "footer_rights": "© 2026 PetBook. Todos los derechos reservados."
+  },
   "menu": {
     "professional_panel": "Panel Profesional",
     "switch_to_guardian": "Cambiar a Guardián",

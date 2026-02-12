@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PetProvider, usePet } from "@/contexts/PetContext";
 import { AppInitializer } from "@/components/layout/AppInitializer";
 import { UserProfileProvider, useUserProfile } from "@/contexts/UserProfileContext";
+import { UpdateNotification } from "@/components/UpdateNotification";
 
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -35,6 +36,7 @@ import ProfessionalPublicProfile from "./pages/ProfessionalPublicProfile";
 import EditPet from "./pages/EditPet";
 import ScanHealth from "./pages/ScanHealth";
 import LocationHub from "./pages/LocationHub";
+import LandingPage from "./pages/LandingPage";
 
 import HealthRecordsPage from "./components/HealthRecords/HealthRecordsPage";
 import { useQuery } from "@tanstack/react-query";
@@ -65,39 +67,6 @@ const HealthRecordsWrapper = () => {
   return <HealthRecordsPage petId={petId} petName={pet.name} />;
 };
 
-const RootRedirect = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { myPets, loading: petLoading } = usePet();
-  const { profile, loading: profileLoading, isProfileComplete } = useUserProfile();
-
-  // Espera todos os carregamentos terminarem antes de decidir o redirecionamento
-  if (authLoading || petLoading || profileLoading) return <LoadingPage />;
-
-  if (!user) return <Navigate to="/auth" replace />;
-  if (!profile) return <LoadingPage />;
-
-  const hasPets = myPets && myPets.length > 0;
-  const isProfessional = profile.account_type === 'professional';
-  
-  // Se é profissional
-  if (isProfessional) {
-    if (isProfileComplete) {
-      return <Navigate to="/professional-dashboard" replace />;
-    }
-    return <Navigate to="/professional-signup" replace />;
-  }
-
-  // Se é guardião
-  if (hasPets) {
-    return <Navigate to="/feed" replace />;
-  } else if (profile.account_type === 'user') {
-    // Se escolheu ser guardião mas não tem pet, vai para criar pet
-    return <Navigate to="/create-pet" replace />;
-  }
-
-  return <Navigate to="/signup-choice" replace />;
-};
-
 const queryClient = new QueryClient();
 
 const AuthRoute = ({ children }: { children: JSX.Element }) => {
@@ -112,7 +81,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { myPets, loading: petLoading } = usePet();
   const { profile, loading: profileLoading } = useUserProfile();
 
-  // ESSENCIAL: Não redireciona enquanto estiver carregando
   if (authLoading || petLoading || profileLoading) return <LoadingPage />;
   
   if (!user) return <Navigate to="/auth" replace />;
@@ -120,23 +88,18 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const isProfessional = profile?.account_type === 'professional';
   const hasPets = myPets && myPets.length > 0;
   
-  // Verifica em qual página o usuário está tentando entrar
   const path = window.location.pathname;
   const isCreatePetPage = path.includes('/create-pet');
   const isSignupChoicePage = path.includes('/signup-choice');
   const isProfessionalSignupPage = path.includes('/professional-signup');
   const isAuthPage = path.includes('/auth');
 
-  // Se o perfil ainda não carregou completamente, não faz redirecionamentos de "setup"
   if (!profile && !authLoading) return <LoadingPage />;
 
-  // Lógica de redirecionamento para setup (apenas se não estiver nas páginas de setup)
   if (!isCreatePetPage && !isSignupChoicePage && !isProfessionalSignupPage && !isAuthPage) {
     if (isProfessional) {
-      // Se é profissional mas não completou o cadastro, manda para o signup profissional
-      // Nota: Você pode adicionar uma verificação de isProfileComplete aqui se desejar
+      // Professional logic
     } else if (!hasPets) {
-      // Se é usuário normal mas não tem pet, manda para escolha ou criar pet
       return <Navigate to="/signup-choice" replace />;
     }
   }
@@ -144,8 +107,21 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
+const LandingOrApp = () => {
+  const { user, loading } = useAuth();
+  const isAndroid = (window as any).Capacitor?.getPlatform() === 'android';
+
+  if (loading) return <LoadingPage />;
+  if (user || isAndroid) {
+    return <Navigate to="/feed" replace />;
+  }
+
+  return <LandingPage />;
+};
+
 const AppRoutes = () => (
   <Routes>
+    <Route path="/" element={<LandingOrApp />} />
     <Route path="/auth" element={<Auth />} />
     <Route path="/auth/confirm" element={<AuthConfirm />} />
     <Route path="/signup-choice" element={<AuthRoute><SignupChoice /></AuthRoute>} />
@@ -345,7 +321,7 @@ const AppRoutes = () => (
       }
     />
 
-    <Route path="/" element={<RootRedirect />} />
+    <Route path="/home" element={<Index />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
@@ -360,6 +336,7 @@ const App = () => (
           <UserProfileProvider>
             <PetProvider>
               <AppInitializer />
+              <UpdateNotification />
               <AppRoutes />
             </PetProvider>
           </UserProfileProvider>
