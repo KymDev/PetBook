@@ -207,7 +207,7 @@ const LandingPage = () => {
               <p className="text-muted-foreground mb-10">{t("landing.download_android_desc")}</p>
               <Button 
                 className="w-full h-14 rounded-2xl bg-black hover:bg-gray-800 text-white font-black text-lg shadow-xl"
-                onClick={() => window.location.href = "/app-release.apk"}
+                onClick={() => window.location.href = "/PetBook.apk"}
               >
                 <Download className="mr-2 w-6 h-6" /> APK
               </Button>

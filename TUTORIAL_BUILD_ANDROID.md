@@ -35,7 +35,7 @@ Sempre que fizer mudanças no código React/Vite, você precisa gerar a build we
     ```
 2.  Sincronize os arquivos com o Capacitor:
     ```bash
-    npx cap copy android
+    npx cap sync android
     ```
 
 ## 3. Gerar o APK no Android Studio
