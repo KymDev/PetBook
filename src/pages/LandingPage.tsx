@@ -98,7 +98,7 @@ const LandingPage = () => {
       description: t("common.more_than_10_species_desc"),
       gradient: "from-pet-pink to-rose-400",
       bgLight: "bg-pet-pink-light",
-      image: "/images/hero-pet.jpg"
+      image: "/images/hero-pet2.jpg"
     },
     {
       icon: <Camera className="w-6 h-6" />,
@@ -106,7 +106,7 @@ const LandingPage = () => {
       description: t("common.share_experiences_desc"),
       gradient: "from-violet-500 to-purple-400",
       bgLight: "bg-violet-50",
-      image: "/images/moments.jpg"
+      image: "/images/moments2.jpg"
     }
   ];
 
