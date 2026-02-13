@@ -336,7 +336,7 @@ const App = () => (
           <UserProfileProvider>
             <PetProvider>
               <AppInitializer />
-              <UpdateNotification />
+              {/* <UpdateNotification /> */}
               <AppRoutes />
             </PetProvider>
           </UserProfileProvider>
