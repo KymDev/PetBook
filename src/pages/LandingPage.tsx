@@ -117,20 +117,10 @@ const LandingPage = () => {
     { icon: <Rabbit className="w-5 h-5" />, name: t("common.rodents"), color: "text-amber-600", bg: "bg-amber-50" }
   ];
 
-  const fadeInUp = {
-    initial: { opacity: 0, y: 30 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true },
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
-  };
-
   return (
     <div className="min-h-screen bg-white text-foreground font-sans overflow-x-hidden selection:bg-primary/20">
       {/* Header Moderno */}
-      <motion.header 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+      <header 
         className={`fixed top-0 w-full z-50 transition-all duration-500 ${
           isScrolled 
             ? 'bg-white/80 backdrop-blur-xl border-b border-gray-100/80 shadow-sm' 
@@ -139,12 +129,9 @@ const LandingPage = () => {
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="relative"
-            >
+            <div className="relative">
               <PetBookLogo size="md" showText={true} />
-            </motion.div>
+            </div>
 
             <div className="hidden md:flex items-center gap-2">
               <LanguageSwitcher className="mr-2" />
@@ -197,33 +184,24 @@ const LandingPage = () => {
             </Button>
           </div>
         </motion.div>
-      </motion.header>
+      </header>
 
       <main className="relative">
         {/* Hero Section */}
         <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
           <div className="absolute inset-0 -z-10">
-            <div className="absolute top-0 -left-4 w-96 h-96 bg-pet-blue rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
-            <div className="absolute top-0 -right-4 w-96 h-96 bg-pet-pink rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
-            <div className="absolute -bottom-8 left-20 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
+            <div className="absolute top-0 -left-4 w-96 h-96 bg-pet-blue rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
+            <div className="absolute top-0 -right-4 w-96 h-96 bg-pet-pink rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
+            <div className="absolute -bottom-8 left-20 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
           </div>
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-pet-blue/10 to-pet-pink/10 rounded-full px-4 py-2 mb-8"
-                >
+              <div>
+                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pet-blue/10 to-pet-pink/10 rounded-full px-4 py-2 mb-8">
                   <PawPrint className="w-4 h-4 text-pet-blue" />
                   <span className="text-sm font-semibold text-pet-blue">{t("common.welcome_to_petbook")}</span>
-                </motion.div>
+                </div>
 
                 <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight mb-6 sm:mb-8 leading-[1.1]">
                   <span className="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
@@ -278,14 +256,9 @@ const LandingPage = () => {
                     </span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="relative"
-              >
+              <div className="relative">
                 <div className="relative z-10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-pet-blue/20 border-8 border-white">
                   <img 
                     src="/images/hero-pet.jpg" 
@@ -294,7 +267,7 @@ const LandingPage = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                   
-                  {/* Floating Card */}
+                  {/* Floating Card - Mantida animação leve de flutuação pois não é de entrada */}
                   <motion.div 
                     animate={{ y: [0, -10, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -315,23 +288,7 @@ const LandingPage = () => {
                 {/* Decorative elements */}
                 <div className="absolute -top-6 -right-6 w-24 h-24 bg-pet-pink/20 rounded-full blur-2xl" />
                 <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-pet-blue/20 rounded-full blur-2xl" />
-                
-                {/* Pet Types Badges */}
-                <div className="absolute -right-4 top-1/4 flex flex-col gap-3">
-                  {petTypes.map((type, i) => (
-                    <motion.div
-                      key={type.name}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 1 + (i * 0.1) }}
-                      className={`${type.bg} ${type.color} p-3 rounded-2xl shadow-lg backdrop-blur-sm border border-white/50 flex items-center gap-2 font-bold text-sm`}
-                    >
-                      {type.icon}
-                      <span className="hidden sm:inline">{type.name}</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </section>
@@ -340,30 +297,18 @@ const LandingPage = () => {
         <section className="py-24 bg-gray-50/50 relative overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center max-w-3xl mx-auto mb-20">
-              <motion.h2 
-                {...fadeInUp}
-                className="text-3xl sm:text-4xl lg:text-5xl font-black mb-6"
-              >
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-6">
                 {t("landing.features_title")}
-              </motion.h2>
-              <motion.p 
-                {...fadeInUp}
-                transition={{ delay: 0.2 }}
-                className="text-lg text-gray-600"
-              >
+              </h2>
+              <p className="text-lg text-gray-600">
                 {t("health.subtitle")}
-              </motion.p>
+              </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
               {features.map((feature, i) => (
-                <motion.div
+                <div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.2 }}
-                  whileHover={{ y: -10 }}
                   className="group bg-white p-8 rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
                 >
                   <div className={`w-16 h-16 rounded-2xl ${feature.bgLight} ${feature.iconColor} flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300`}>
@@ -373,7 +318,7 @@ const LandingPage = () => {
                   <p className="text-gray-600 leading-relaxed">
                     {feature.description}
                   </p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -385,12 +330,7 @@ const LandingPage = () => {
             <div className="space-y-24">
               {benefits.map((benefit, i) => (
                 <div key={benefit.title} className={`grid lg:grid-cols-2 gap-16 items-center ${i % 2 === 1 ? 'lg:direction-rtl' : ''}`}>
-                  <motion.div 
-                    initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    className={i % 2 === 1 ? 'lg:order-2' : ''}
-                  >
+                  <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
                     <div className={`w-14 h-14 rounded-2xl ${benefit.bgLight} flex items-center justify-center mb-6`}>
                       {benefit.icon}
                     </div>
@@ -407,19 +347,14 @@ const LandingPage = () => {
                     >
                       {t("common.see_more")}
                     </Button>
-                  </motion.div>
+                  </div>
                   
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    className={`relative ${i % 2 === 1 ? 'lg:order-1' : ''}`}
-                  >
+                  <div className={`relative ${i % 2 === 1 ? 'lg:order-1' : ''}`}>
                     <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white aspect-video lg:aspect-square">
                       <img src={benefit.image} alt={benefit.title} className="w-full h-full object-cover" />
                     </div>
                     <div className={`absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-r ${benefit.gradient} opacity-10 blur-3xl rounded-full`} />
-                  </motion.div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -444,10 +379,7 @@ const LandingPage = () => {
                   </p>
                   
                   <div className="grid sm:grid-cols-2 gap-6">
-                    <motion.div 
-                      whileHover={{ y: -5 }}
-                      className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10"
-                    >
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10">
                       <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white mb-4">
                         <Smartphone className="w-6 h-6" />
                       </div>
@@ -459,21 +391,18 @@ const LandingPage = () => {
                       >
                         {t("landing.download_safe_apk")}
                       </Button>
-                    </motion.div>
+                    </div>
 
-                    <motion.div 
-                      whileHover={{ y: -5 }}
-                      className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 opacity-60"
-                    >
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 opacity-60">
                       <div className="w-12 h-12 bg-gray-600 rounded-2xl flex items-center justify-center text-white mb-4">
                         <Globe className="w-6 h-6" />
                       </div>
                       <h4 className="text-white font-bold mb-2">iOS</h4>
                       <p className="text-sm text-gray-400 mb-4">{t("landing.download_ios_desc")}</p>
                       <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10 rounded-xl" disabled>
-                        {t("landing.available_soon")}
+                        {t("available_soon")}
                       </Button>
-                    </motion.div>
+                    </div>
                   </div>
 
                   <div className="mt-8 p-6 bg-pet-blue/10 rounded-3xl border border-pet-blue/20 flex items-center gap-4">
@@ -498,7 +427,6 @@ const LandingPage = () => {
                   <motion.div
                     animate={{ y: [0, -20, 0] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative z-10"
                   >
                     <img src="/images/moments.jpg" alt="App Preview" className="w-[80%] mx-auto rounded-[3rem] shadow-2xl border-4 border-gray-800" />
                   </motion.div>
