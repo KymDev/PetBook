@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePet } from "@/contexts/PetContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,21 +11,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X, Stethoscope, BadgeCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function CreateStory() {
   const { user } = useAuth();
   const { currentPet } = usePet();
+  const { profile } = useUserProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
-  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
 
-  if (!user || !currentPet) {
+  const isProfessional = profile?.account_type === 'professional';
+
+  if (!user || (!isProfessional && !currentPet)) {
     return (
       <MainLayout>
         <div className="container max-w-lg py-6">
@@ -84,8 +88,30 @@ export default function CreateStory() {
 
       if (!finalMediaUrl) throw new Error("Falha ao fazer upload da mídia");
 
+      let targetPetId = currentPet?.id;
+
+      if (isProfessional && !targetPetId) {
+        const { data: profPets } = await supabase
+          .from("pets")
+          .select("id")
+          .eq("user_id", user?.id)
+          .limit(1);
+        
+        if (profPets && profPets.length > 0) {
+          targetPetId = profPets[0].id;
+        } else {
+          toast({
+            title: "Perfil incompleto",
+            description: "Profissionais precisam ter ao menos um perfil de pet representativo para criar stories.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.from("stories").insert({
-        pet_id: currentPet.id,
+        pet_id: targetPetId,
         media_url: finalMediaUrl,
         description: description || null,
       });
@@ -117,16 +143,33 @@ export default function CreateStory() {
           <div className="text-center">
             <h1 className="text-2xl font-heading font-bold">Criar Story</h1>
             <p className="text-muted-foreground">
-              Compartilhe um momento que desaparecerá em 24h
+              {isProfessional ? "Mostre o dia a dia do seu negócio para seus clientes" : "Compartilhe um momento que desaparecerá em 24h"}
             </p>
           </div>
 
           <Card className="card-elevated border-0">
             <CardHeader>
-              <CardTitle>Nova Story</CardTitle>
-              <CardDescription>
-                Adicione uma foto ou vídeo e uma descrição (opcional)
-              </CardDescription>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="relative">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-white",
+                    isProfessional ? "bg-blue-600" : "bg-primary"
+                  )}>
+                    {isProfessional ? <Stethoscope className="h-5 w-5" /> : (currentPet?.name?.[0] || "?")}
+                  </div>
+                  {isProfessional && (
+                    <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-0.5 shadow-sm border border-white">
+                      <BadgeCheck className="h-2 w-2" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <CardTitle className="text-base">Nova Story</CardTitle>
+                  <CardDescription className="text-xs">
+                    {isProfessional ? "Publicando como Profissional" : `Publicando como ${currentPet?.name}`}
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -201,7 +244,7 @@ export default function CreateStory() {
                 <Button
                   type="submit"
                   disabled={loading || !mediaFile}
-                  className="w-full gradient-bg"
+                  className={cn("w-full", isProfessional ? "bg-blue-600 hover:bg-blue-700" : "gradient-bg")}
                   size="lg"
                 >
                   {loading ? (

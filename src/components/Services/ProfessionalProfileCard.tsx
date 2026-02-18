@@ -15,10 +15,12 @@ import {
   Hotel,
   Star,
   Award,
-  ExternalLink
+  ExternalLink,
+  Navigation
 } from 'lucide-react';
 import { formatDistance } from '@/integrations/supabase/geolocationService';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface ProfessionalProfileCardProps {
   profile: UserProfile & { distance?: number };
@@ -90,13 +92,19 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
 
   const handleDirections = () => {
     if (profile.professional_address) {
-      const query = encodeURIComponent(profile.professional_address);
+      const query = encodeURIComponent(`${profile.professional_address}, ${profile.professional_city || ''}`);
       window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
     }
   };
 
   const averageRating = 4.5; 
   const totalReviews = 42;
+
+  const fullAddress = [
+    profile.professional_address,
+    profile.professional_city,
+    profile.professional_state
+  ].filter(Boolean).join(', ');
 
   return (
     <Card className="card-elevated border-0 overflow-hidden animate-fade-in hover:shadow-xl transition-all duration-300">
@@ -177,13 +185,15 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
 
         {/* Informações de Localização e Distância */}
         <div className="flex items-center justify-between border-t border-dashed pt-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-1">
             <MapPin className="h-4 w-4 text-primary/40 shrink-0" />
-            <span className="truncate">{profile.professional_address || 'Endereço não informado'}</span>
+            <span className={cn("truncate", !fullAddress && "italic text-red-400 font-medium")}>
+              {fullAddress || 'Endereço não informado'}
+            </span>
           </div>
           
           {profile.distance !== undefined && (
-            <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-tighter shrink-0">
+            <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-tighter shrink-0 ml-2">
               {formatDistance(profile.distance)}
             </div>
           )}
@@ -196,6 +206,17 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
               Ver Perfil
             </Button>
           </Link>
+
+          {profile.professional_address && (
+            <Button 
+              onClick={handleDirections}
+              variant="outline"
+              size="sm"
+              className="border-primary/20 text-primary hover:bg-primary/5 font-bold"
+            >
+              <Navigation className="h-4 w-4" />
+            </Button>
+          )}
 
           {profile.professional_whatsapp && (
             <Button 

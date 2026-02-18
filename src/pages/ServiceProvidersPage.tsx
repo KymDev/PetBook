@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAllProfessionalProfiles, UserProfile } from '@/integrations/supabase/userProfilesService';
-import { UserProfile } from '@/integrations/supabase/userProfilesService';
 import { Database } from '@/integrations/supabase/types';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Loader2, Search, Filter, MapPin, Navigation } from 'lucide-react';

@@ -7,6 +7,7 @@ import { HealthRecordDetails } from './HealthRecordDetails';
 import { cn } from "@/lib/utils";
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface HealthRecord {
   id: string;
@@ -24,6 +25,23 @@ interface HealthRecord {
   health_standards_exams?: { name: string };
 }
 
+const HealthRecordSkeleton = () => (
+  <div className="flex items-center gap-3 p-3 md:p-4 bg-muted/20 rounded-2xl border border-transparent">
+    <Skeleton className="h-10 w-10 md:h-12 md:w-12 rounded-xl shrink-0" />
+    <div className="flex-1 space-y-2">
+      <div className="flex justify-between">
+        <Skeleton className="h-3 w-16 rounded-full" />
+        <Skeleton className="h-3 w-12 rounded-full" />
+      </div>
+      <Skeleton className="h-4 w-3/4" />
+      <div className="flex gap-2">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  </div>
+);
+
 export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
   const { t, i18n } = useTranslation();
   const [records, setRecords] = useState<HealthRecord[]>([]);
@@ -37,6 +55,7 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
   }, [petId]);
 
   const fetchHealthTimeline = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('health_records')
@@ -128,9 +147,11 @@ export const HealthDashboard: React.FC<{ petId: string }> = ({ petId }) => {
 
       <div className="space-y-3">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
-          </div>
+          <>
+            <HealthRecordSkeleton />
+            <HealthRecordSkeleton />
+            <HealthRecordSkeleton />
+          </>
         ) : records.length === 0 ? (
           <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed">
             <ClipboardList className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />

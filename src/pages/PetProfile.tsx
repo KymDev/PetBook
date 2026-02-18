@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { HealthAccessButton } from "@/components/pet/HealthAccessButton";
-import { Heart, PawPrint, Cookie, ExternalLink, UserPlus, UserMinus, MessageCircle, Settings, Users, ClipboardList, Plus, ChevronRight } from "lucide-react";
+import { Heart, PawPrint, Cookie, ExternalLink, UserPlus, UserMinus, MessageCircle, Settings, Users, ClipboardList, Plus, ChevronRight, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GuardianPetHeader } from "@/components/layout/GuardianPetHeader";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ const PetProfile = () => {
   const isProfessional = profile?.account_type === 'professional';
 
   const [pet, setPet] = useState<Pet | null>(null);
-  const [guardianProfile, setGuardianProfile] = useState<{ full_name: string, professional_whatsapp: string | null, account_type: string } | null>(null);
+  const [guardianProfile, setGuardianProfile] = useState<{ id: string, full_name: string, professional_whatsapp: string | null, account_type: string, professional_avatar_url?: string | null } | null>(null);
   const [badges, setBadges] = useState<any[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ const PetProfile = () => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("user_profiles")
-      .select("full_name, professional_whatsapp, account_type")
+      .select("id, full_name, professional_whatsapp, account_type, professional_avatar_url")
       .eq("id", petData.user_id)
       .single();
 
@@ -87,7 +87,7 @@ const PetProfile = () => {
       console.error("Erro ao buscar perfil do guardião:", profileError);
       setGuardianProfile(null);
     } else {
-      setGuardianProfile(profileData as { full_name: string, professional_whatsapp: string | null, account_type: string });
+      setGuardianProfile(profileData as any);
     }
 
     const { data: postsData } = await supabase
@@ -327,7 +327,7 @@ const PetProfile = () => {
 
                 {isOwnPet && (
                   <Button asChild variant="outline" className="w-full rounded-xl font-bold">
-                    <Link to={`/pet/${pet.id}/edit`}>
+                    <Link to={`/edit-pet/${pet.id}`}>
                       <Settings className="h-4 w-4 mr-2" />
                       {t("profile.edit_profile")}
                     </Link>
@@ -369,25 +369,37 @@ const PetProfile = () => {
 
           {/* Guardian Info */}
           {guardianProfile && (
-            <Card className="card-elevated border-0">
+            <Card className="card-elevated border-0 overflow-hidden group hover:shadow-md transition-all">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
+                    <Avatar className="h-10 w-10 border-2 border-primary/10">
+                      <AvatarImage src={guardianProfile.professional_avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/5 text-primary">
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t("profile.guardian")}</p>
                       <p className="font-bold text-sm">{guardianProfile.full_name}</p>
                     </div>
                   </div>
-                  {guardianProfile.professional_whatsapp && (
-                    <Button variant="ghost" size="sm" className="text-primary font-bold gap-1" asChild>
-                      <a href={`https://wa.me/${guardianProfile.professional_whatsapp}`} target="_blank" rel="noopener noreferrer">
-                        WhatsApp <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {guardianProfile.account_type === 'professional' && (
+                      <Button variant="ghost" size="sm" className="text-primary font-bold gap-1 rounded-full" asChild>
+                        <Link to={`/professional/${guardianProfile.id}`}>
+                          {t("common.profile")} <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {guardianProfile.professional_whatsapp && (
+                      <Button variant="outline" size="icon" className="rounded-full border-green-500/20 text-green-600 hover:bg-green-50" asChild>
+                        <a href={`https://wa.me/${guardianProfile.professional_whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -398,24 +410,25 @@ const PetProfile = () => {
             <div className="flex items-center justify-between px-1">
               <h2 className="font-heading font-bold text-lg">{t("profile.posts")}</h2>
               {isOwnPet && (
-                <Button asChild size="sm" variant="ghost" className="text-primary font-bold gap-1">
+                <Button asChild size="sm" className="rounded-full font-bold gap-2">
                   <Link to="/create-post">
-                    <Plus className="h-4 w-4" /> {t("feed.create_post")}
+                    <Plus className="h-4 w-4" />
+                    {t("common.new_post")}
                   </Link>
                 </Button>
               )}
             </div>
             
-            {posts.length === 0 ? (
-              <div className="text-center py-12 bg-muted/30 rounded-2xl border border-dashed">
-                <PawPrint className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                <p className="text-muted-foreground text-sm">{t("feed.no_posts")}</p>
+            {posts.length > 0 ? (
+              <div className="space-y-4 pb-10">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={{...post, pet: pet as Pet}} profile={profile} />
+                ))}
               </div>
             ) : (
-              <div className="space-y-4">
-                {posts.map((post) => (
-                  <PostCard key={post.id} post={{...post, pet: pet}} profile={profile} />
-                ))}
+              <div className="text-center py-20 bg-muted/20 rounded-3xl border border-dashed">
+                <PawPrint className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">{t("common.no_posts_yet")}</p>
               </div>
             )}
           </div>

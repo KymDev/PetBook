@@ -26,12 +26,12 @@ export interface UserProfile {
   professional_crmv_state?: string;
   created_at: string;
   updated_at: string;
+  full_name?: string;
 }
 
 interface UserProfileContextType {
   profile: UserProfile | null;
   loading: boolean;
-  switchAccountType: (type: AccountType) => Promise<void>;
   updateProfessionalProfile: (data: any) => Promise<void>;
   refreshProfile: () => Promise<void>;
   setAccountType: (type: AccountType) => Promise<void>;
@@ -121,27 +121,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     fetchProfile();
   }, [user]);
 
-  const switchAccountType = async (type: AccountType) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({ account_type: type })
-        .eq("id", user.id);
-      if (error) throw error;
-      
-      await fetchProfile();
-    } catch (error) {
-      console.error("Error switching account type:", error);
-      throw error;
-    }
-  };
-
   const updateProfessionalProfile = async (data: any) => {
     if (!user) return;
 
     try {
-      // Garantir que o account_type seja professional ao atualizar o perfil profissional
       const updateData = { 
         ...data, 
         account_type: 'professional',
@@ -192,7 +175,6 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       value={{
         profile,
         loading,
-        switchAccountType,
         updateProfessionalProfile,
         refreshProfile,
         setAccountType,
