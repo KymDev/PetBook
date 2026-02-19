@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "release": "standard-version --release-as patch && npm run build && npx cap sync android",
     "release:minor": "standard-version --release-as minor && npm run build && npx cap sync android",
     "release:major": "standard-version --release-as major && npm run build && npx cap sync android",
+    "release:apk": "standard-version --release-as patch && npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug && cd .. && copy android\\app\\build\\outputs\\apk\\debug\\app-debug.apk PetBook.apk",
     "android": "npx cap open android"
   },
   "dependencies": {
