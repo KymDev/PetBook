@@ -130,7 +130,7 @@ export const StoriesBar = () => {
   }
 
   return (
-    <div className="relative group bg-background border-b border-border py-3 md:py-4">
+    <div className="relative group bg-background border-b border-border py-3 md:py-4 md:rounded-3xl md:border md:mb-6">
       <Button
         variant="ghost"
         size="icon"

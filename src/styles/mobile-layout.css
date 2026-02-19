@@ -1,0 +1,192 @@
+/* Mobile Layout Styles */
+
+/* Safe area support for notched devices */
+@supports (padding: max(0px)) {
+  .pt-safe {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .pl-safe {
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
+  .pr-safe {
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+}
+
+/* Mobile Header Styles */
+@media (max-width: 768px) {
+  header {
+    /* Smooth transitions for header state changes */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Bottom Navigation Styles */
+  nav[role="navigation"] {
+    /* Ensure bottom nav stays above content */
+    z-index: 1005;
+    
+    /* Smooth transitions for active states */
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* Navigation Item Styles */
+  nav a,
+  nav button {
+    /* Smooth color transitions */
+    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    
+    /* Prevent text selection on double tap */
+    -webkit-user-select: none;
+    user-select: none;
+    
+    /* Improve tap target size */
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Active Navigation Item */
+nav a[href]:not([href*="javascript"]).active,
+nav a[href]:not([href*="javascript"]):focus-visible {
+  outline: none;
+}
+
+/* Profile Avatar in Bottom Nav */
+nav button[role="button"] {
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+
+nav button[role="button"]:active {
+  transform: scale(0.95);
+}
+
+/* Avatar Border Colors */
+.border-pet-pink {
+  border-color: #ff6b9d;
+}
+
+.border-blue-500 {
+  border-color: #3b82f6;
+}
+
+/* Notification Badge */
+.notification-badge {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Smooth Page Transitions */
+main {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dropdown Menu Animations */
+[role="menu"] {
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Prevent layout shift when scrollbar appears/disappears */
+body {
+  scrollbar-gutter: stable;
+}
+
+/* Improve touch interactions on mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover effects on touch devices */
+  button:hover,
+  a:hover {
+    background-color: transparent;
+  }
+
+  /* Add active state instead */
+  button:active,
+  a:active {
+    opacity: 0.7;
+  }
+}
+
+/* Optimize for small screens */
+@media (max-width: 640px) {
+  /* Increase touch target sizes */
+  nav a,
+  nav button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Reduce padding on small screens */
+  main {
+    padding: 0.5rem;
+  }
+}
+
+/* Dark mode support - Only for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  header,
+  nav {
+    background-color: rgba(0, 0, 0, 0.95);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  header {
+    height: 3rem;
+  }
+
+  nav {
+    height: 3rem;
+  }
+
+  main {
+    padding-top: calc(3rem + env(safe-area-inset-top));
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom));
+  }
+}

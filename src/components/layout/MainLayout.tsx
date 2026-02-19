@@ -4,6 +4,7 @@ import { PetBookLogo } from "@/components/PetBookLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePet, Pet } from "@/contexts/PetContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import { MobileLayout } from "./MobileLayout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -67,6 +68,16 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isDeletePetOpen, setIsDeletePetOpen] = useState(false);
@@ -212,34 +223,39 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     { href: "/chat", icon: MessageCircle, label: t("common.chat") },
   ];
 
+  // Use MobileLayout for mobile devices
+  if (isMobile) {
+    return <MobileLayout>{children}</MobileLayout>;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background hidden md:flex md:flex-col">
       {/* Desktop Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-lg hidden md:block">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-white dark:bg-background/95 backdrop-blur-lg w-full">
         <div className="container flex h-full items-center justify-between px-4 max-w-6xl mx-auto">
           <Link to="/feed" className="flex-shrink-0">
             <PetBookLogo size="sm" />
           </Link>
 
-          <nav className="flex items-center gap-4 lg:gap-8 absolute left-1/2 -translate-x-1/2">
+          <nav className="flex items-center gap-1 lg:gap-2">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "relative flex items-center justify-center p-2 rounded-full transition-all hover:bg-muted",
+                  "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-muted group",
                   location.pathname === item.href
-                    ? "text-primary"
+                    ? "text-primary bg-primary/5"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={item.label}
               >
                 <item.icon className={cn(
-                  item.isSpecial ? "h-6 w-6" : "h-5 w-5",
+                  "h-5 w-5 transition-transform group-hover:scale-110",
                   location.pathname === item.href && "fill-current"
                 )} />
+                <span className="text-sm font-medium hidden lg:inline-block">{item.label}</span>
                 {item.hasBadge && unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -249,16 +265,16 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
               <Link
                 to="/notifications"
                 className={cn(
-                  "relative flex items-center justify-center p-2 rounded-full transition-all hover:bg-muted",
+                  "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:bg-muted group",
                   location.pathname === "/notifications"
-                    ? "text-primary"
+                    ? "text-primary bg-primary/5"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={t("common.notifications")}
               >
-                <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
+                <PawPrint className={cn("h-5 w-5 transition-transform group-hover:scale-110", location.pathname === "/notifications" && "fill-current")} />
+                <span className="text-sm font-medium hidden lg:inline-block">{t("common.notifications")}</span>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -400,160 +416,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
       </header>
 
-      {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 pt-safe border-b border-border bg-background/95 backdrop-blur-lg md:hidden">
-        <div className="container flex h-12 items-center justify-between px-4">
-          <Link to="/feed" className="flex-shrink-0">
-            <PetBookLogo size="sm" />
-          </Link>
-          <div className="flex items-center gap-2">
-            {!isProfessional && (
-              <Link to="/notifications" className="relative p-2">
-                <PawPrint className={cn("h-5 w-5", location.pathname === "/notifications" && "fill-current")} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Link>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>{t("common.create_new")}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/create-post" className="flex items-center gap-2">
-                    <PlusSquare className="h-4 w-4" />
-                    {t("common.new_post")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/create-story" className="flex items-center gap-2">
-                    <PlusCircle className="h-4 w-4" />
-                    {t("common.new_story")}
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {!isProfessional && (
-              <Link to="/services" className="p-2">
-                <Stethoscope className={cn("h-5 w-5", location.pathname === "/services" && "fill-current")} />
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="pt-[calc(3rem+env(safe-area-inset-top))] md:pt-14 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 min-h-screen">
-        <div className="container px-4 py-4 max-w-6xl mx-auto">
-          {children}
-        </div>
+      <main className="flex-1 pt-14 w-full">
+        {children}
       </main>
-
-      {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe border-t border-border bg-background/95 backdrop-blur-lg flex items-center justify-around px-2 md:hidden">
-        <div className="flex items-center justify-around w-full h-16">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center min-w-[64px] transition-all relative",
-                location.pathname === item.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
-              <item.icon className={cn(
-                item.isSpecial ? "h-6 w-6" : "h-5 w-5",
-                location.pathname === item.href && "fill-current"
-              )} />
-              {item.hasBadge && unreadCount > 0 && (
-                <span className="absolute top-2 right-4 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-              <span className="text-[10px] mt-1 font-medium">{item.label}</span>
-            </Link>
-          ))}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button 
-                className={cn(
-                  "flex flex-col items-center justify-center min-w-[64px] transition-all",
-                  location.pathname.startsWith("/pet/") || location.pathname.startsWith("/professional-")
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <Avatar className={cn("h-6 w-6 border", isProfessional ? "border-blue-500" : "border-current")}>
-                  {isProfessional ? (
-                    <AvatarImage src={profile?.professional_avatar_url || undefined} />
-                  ) : (
-                    <AvatarImage src={currentPet?.avatar_url || undefined} />
-                  )}
-                  <AvatarFallback className="text-[8px]">
-                    {isProfessional ? (profile?.full_name?.[0] || 'P') : (currentPet?.name?.[0] || 'P')}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-[10px] mt-1 font-medium">{t("common.profile")}</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" className="w-64 mb-2">
-              <DropdownMenuLabel className="flex items-center gap-2">
-                {t("common.profile")}
-                {isProfessional && <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full uppercase tracking-widest">Profissional</span>}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              
-              {isProfessional ? (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link to="/professional-dashboard" className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      {t("menu.professional_panel")}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/professional-profile" className="flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      {t("common.settings")}
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link to={currentPet ? `/pet/${currentPet.id}` : "/feed"} className="flex items-center gap-2">
-                      <UserIcon className="h-4 w-4" />
-                      {t("menu.pet_profile")}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/create-pet" className="flex items-center gap-2">
-                      <PlusCircle className="h-4 w-4" />
-                      {t("menu.add_pet")}
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              )}
-              
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-                <LogOut className="h-4 w-4 mr-2" />
-                {t("common.logout")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </nav>
 
       {/* Modals remain the same... */}
       <AlertDialog open={isDeleteAccountOpen} onOpenChange={setIsDeleteAccountOpen}>

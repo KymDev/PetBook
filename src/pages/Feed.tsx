@@ -148,9 +148,9 @@ const Feed = () => {
 
   return (
     <MainLayout>
-      <div className="container max-w-xl px-0 md:px-4 py-0 md:py-6 space-y-0 md:space-y-6">
+      <div className="container max-w-4xl px-0 md:px-4 py-0 md:py-6 space-y-0 md:space-y-6">
         <StoriesBar />
-        <div className="px-4 md:px-0 py-4 md:py-0 space-y-6">
+        <div className="px-4 md:px-0 py-4 md:py-0 space-y-6 max-w-xl mx-auto">
 
         {loading ? (
           <div className="space-y-4">
