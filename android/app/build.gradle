@@ -14,9 +14,10 @@ android {
 
         targetSdkVersion rootProject.ext.targetSdkVersion
 
-        versionCode 2
+        // 🔥 versão corrigida
+        versionCode 3
 
-        versionName "1.0.1"
+        versionName "1.0.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -94,6 +95,6 @@ try {
 
 } catch(Exception e) {
 
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+    logger.info("google-services.json not found, google-services plugin not applied.")
 
 }

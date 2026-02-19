@@ -1,10 +1,10 @@
 {
-  "latestVersion": "1.0.1",
+  "latestVersion": "1.0.2",
   "minVersion": "1.0.0",
-  "downloadUrl": "https://petbook.com.br/#download",
+  "downloadUrl": "https://www.petbook.fun/PetBook.apk",
   "releaseNotes": {
-    "pt": "Melhorias no layout para Android (Safe Area) e correções de tradução.",
-    "en": "Layout improvements for Android (Safe Area) and translation fixes.",
-    "es": "Mejoras de diseño para Android (Safe Area) y correcciones de traducción."
+    "pt": "Nova versão 1.0.2 com correções, melhorias de desempenho e atualização oficial.",
+    "en": "New version 1.0.2 with fixes, performance improvements and official update.",
+    "es": "Nueva versión 1.0.2 con correcciones, mejoras de rendimiento y actualización oficial."
   }
 }
