@@ -148,50 +148,52 @@ const Feed = () => {
 
   return (
     <MainLayout>
-      <div className="container max-w-4xl px-0 md:px-4 py-0 md:py-6 space-y-0 md:space-y-6">
+      <div className="w-full max-w-4xl mx-auto md:px-4 md:py-6 space-y-0 md:space-y-6">
         <StoriesBar />
-        <div className="px-4 md:px-0 py-4 md:py-0 space-y-6 max-w-xl mx-auto">
-
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="overflow-hidden">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
+        
+        <div className="w-full max-w-xl mx-auto space-y-0 md:space-y-6">
+          {loading ? (
+            <div className="space-y-0 md:space-y-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i} className="overflow-hidden border-0 md:border rounded-none md:rounded-xl">
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
                     </div>
-                  </div>
-                  <Skeleton className="aspect-square rounded-lg" />
+                    <Skeleton className="aspect-square w-full rounded-none md:rounded-lg" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="px-4 py-12">
+              <Card className="card-elevated border-0 rounded-2xl">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <PawPrint className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{t("common.no_posts_yet")}</h3>
+                  <p className="text-muted-foreground mb-4">{t("common.follow_new_pets")}</p>
+                  {!isProfessional && (
+                    <Link to="/create-post">
+                      <Button className="gradient-bg rounded-xl">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        {t("common.create_post")}
+                      </Button>
+                    </Link>
+                  )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : posts.length === 0 ? (
-          <Card className="card-elevated border-0">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <PawPrint className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{t("common.no_posts_yet")}</h3>
-              <p className="text-muted-foreground mb-4">{t("common.follow_new_pets")}</p>
-              {!isProfessional && (
-                <Link to="/create-post">
-                  <Button className="gradient-bg">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    {t("common.create_post")}
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {posts.map(post => (
-              <PostCard key={post.id} post={post} profile={profile} />
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="space-y-0 md:space-y-6">
+              {posts.map(post => (
+                <PostCard key={post.id} post={post} profile={profile} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

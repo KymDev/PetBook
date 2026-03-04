@@ -107,29 +107,29 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
   ].filter(Boolean).join(', ');
 
   return (
-    <Card className="card-elevated border-0 overflow-hidden animate-fade-in hover:shadow-xl transition-all duration-300">
-      {/* Header com gradiente e informações principais (Nome e Serviço em Branco) */}
-      <div className={`h-32 bg-gradient-to-r ${config.gradient} relative p-6 flex items-center`}>
-        <div className="flex items-center gap-4 w-full">
-          <Avatar className="h-20 w-20 border-4 border-white/30 shadow-xl shrink-0">
+    <Card className="card-elevated border-0 md:border rounded-none md:rounded-xl overflow-hidden animate-fade-in hover:shadow-xl transition-all duration-300 shadow-none md:shadow-sm">
+      {/* Header com gradiente e informações principais */}
+      <div className={`h-28 md:h-32 bg-gradient-to-r ${config.gradient} relative p-4 md:p-6 flex items-center`}>
+        <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
+          <Avatar className="h-16 md:h-20 w-16 md:w-20 border-4 border-white/30 shadow-xl shrink-0">
             <AvatarImage src={profile.professional_avatar_url || undefined} className="object-cover" />
-            <AvatarFallback className={`${config.color} text-white text-2xl font-bold`}>
-              {profile.full_name?.[0] || <Icon className="h-8 w-8" />}
+            <AvatarFallback className={`${config.color} text-white text-xl md:text-2xl font-bold`}>
+              {profile.full_name?.[0] || <Icon className="h-6 w-6 md:h-8 md:w-8" />}
             </AvatarFallback>
           </Avatar>
           
-          <div className="flex-1 text-white">
-            <h3 className="text-2xl font-black leading-tight tracking-tight drop-shadow-sm">
+          <div className="flex-1 text-white min-w-0">
+            <h3 className="text-lg md:text-2xl font-black leading-tight tracking-tight drop-shadow-sm truncate">
               {profile.full_name}
             </h3>
-            <p className="text-sm font-medium opacity-90 tracking-wide uppercase mt-0.5">
+            <p className="text-xs md:text-sm font-medium opacity-90 tracking-wide uppercase mt-0.5 truncate">
               {displayLabel}
             </p>
           </div>
         </div>
 
         {isHealthProfessional && profile.professional_crmv && (
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-2 right-2 md:top-3 md:right-3">
             <a 
               href={`https://www.cfmv.gov.br/consulta-ao-cadastro-nacional-de-medicos-veterinarios-e-zootecnistas/`} 
               target="_blank" 
@@ -137,7 +137,7 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
               className="block hover:scale-105 transition-transform"
               title="Validar CRMV no portal CFMV"
             >
-              <Badge className="bg-white/10 backdrop-blur-md border-white/20 text-white text-[10px] font-bold cursor-pointer hover:bg-white/20">
+              <Badge className="bg-white/10 backdrop-blur-md border-white/20 text-white text-[9px] md:text-[10px] font-bold cursor-pointer hover:bg-white/20">
                 CRMV: {profile.professional_crmv}
                 <ExternalLink className="h-2 w-2 ml-1" />
               </Badge>
@@ -146,46 +146,46 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
         )}
       </div>
 
-      <CardContent className="pt-4 pb-6 space-y-5">
-        {/* Área Branca: Selos e Badges com o estilo solicitado */}
+      <CardContent className="pt-3 md:pt-4 pb-4 md:pb-6 space-y-3 md:space-y-5">
+        {/* Área com Selos e Badges */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Selo da Profissão Dinâmica */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/20 shadow-sm">
+          <div className="inline-flex items-center gap-1.5 px-2 md:px-3 py-1 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/20 shadow-sm">
             <ProfessionalBadge 
               isProfessional={true} 
               serviceType={serviceType} 
               size="sm" 
               showText={false}
             />
-            <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
+            <span className="text-[10px] md:text-[11px] font-bold text-primary uppercase tracking-wider">
               {displayLabel}
             </span>
           </div>
 
           {profile.is_professional_verified && (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 shadow-sm">
+            <div className="inline-flex items-center gap-1.5 px-2 md:px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 shadow-sm">
               <VerifiedBadge size="sm" />
-              <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Verificado</span>
+              <span className="text-[10px] md:text-[11px] font-bold text-blue-600 uppercase tracking-wider">Verificado</span>
             </div>
           )}
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-100 shadow-sm ml-auto">
-            <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-            <span className="text-[11px] font-bold text-yellow-700">{averageRating.toFixed(1)}</span>
-            <span className="text-[10px] text-yellow-600/70 font-medium">({totalReviews})</span>
+          <div className="inline-flex items-center gap-1.5 px-2 md:px-3 py-1 rounded-full bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-100 shadow-sm md:ml-auto">
+            <Star className="h-3 w-3 md:h-3.5 md:w-3.5 fill-yellow-500 text-yellow-500 shrink-0" />
+            <span className="text-[10px] md:text-[11px] font-bold text-yellow-700">{averageRating.toFixed(1)}</span>
+            <span className="text-[9px] md:text-[10px] text-yellow-600/70 font-medium">({totalReviews})</span>
           </div>
         </div>
 
         {/* Descrição */}
         {profile.professional_bio && (
-          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
+          <p className="text-muted-foreground text-xs md:text-sm leading-relaxed line-clamp-2">
             {profile.professional_bio}
           </p>
         )}
 
         {/* Informações de Localização e Distância */}
-        <div className="flex items-center justify-between border-t border-dashed pt-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-1">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-t border-dashed pt-3 md:pt-4">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground min-w-0 flex-1">
             <MapPin className="h-4 w-4 text-primary/40 shrink-0" />
             <span className={cn("truncate", !fullAddress && "italic text-red-400 font-medium")}>
               {fullAddress || 'Endereço não informado'}
@@ -193,41 +193,46 @@ const ProfessionalProfileCard: React.FC<ProfessionalProfileCardProps> = ({ profi
           </div>
           
           {profile.distance !== undefined && (
-            <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-tighter shrink-0 ml-2">
+            <div className="text-[9px] md:text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-tighter shrink-0">
               {formatDistance(profile.distance)}
             </div>
           )}
         </div>
 
-        {/* Ações */}
-        <div className="flex gap-2 pt-1">
+        {/* Ações - Stack Mobile, Flex Desktop */}
+        <div className="flex flex-col md:flex-row gap-2 pt-1">
           <Link to={`/professional/${profile.id}`} className="flex-1">
-            <Button className="w-full gradient-bg shadow-md hover:shadow-lg transition-all font-bold" size="sm">
+            <Button className="w-full gradient-bg shadow-md hover:shadow-lg transition-all font-bold h-10 rounded-lg text-sm md:text-base" size="sm">
               Ver Perfil
             </Button>
           </Link>
 
-          {profile.professional_address && (
-            <Button 
-              onClick={handleDirections}
-              variant="outline"
-              size="sm"
-              className="border-primary/20 text-primary hover:bg-primary/5 font-bold"
-            >
-              <Navigation className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex gap-2 flex-1 md:flex-none">
+            {profile.professional_address && (
+              <Button 
+                onClick={handleDirections}
+                variant="outline"
+                size="sm"
+                className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary/5 font-bold h-10 rounded-lg"
+                title="Abrir no Google Maps"
+              >
+                <Navigation className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Mapa</span>
+              </Button>
+            )}
 
-          {profile.professional_whatsapp && (
-            <Button 
-              onClick={() => handleContact('whatsapp')}
-              variant="outline"
-              size="sm"
-              className="border-primary/20 text-primary hover:bg-primary/5 font-bold"
-            >
-              WhatsApp
-            </Button>
-          )}
+            {profile.professional_whatsapp && (
+              <Button 
+                onClick={() => handleContact('whatsapp')}
+                variant="outline"
+                size="sm"
+                className="flex-1 md:flex-none border-primary/20 text-primary hover:bg-primary/5 font-bold h-10 rounded-lg text-sm"
+              >
+                <span className="hidden md:inline">WhatsApp</span>
+                <span className="md:hidden">Chat</span>
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

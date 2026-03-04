@@ -95,33 +95,35 @@ const ServiceProvidersPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container max-w-xl py-6 space-y-6">
-        <h1 className="text-3xl font-bold font-heading">Serviços Pet</h1>
-        <p className="text-muted-foreground">Encontre veterinários, passeadores, adestradores e os melhores profissionais para o seu pet perto de você.</p>
+      <div className="w-full max-w-2xl mx-auto px-4 md:px-0 py-4 md:py-6 space-y-4 md:space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl md:text-3xl font-bold">Serviços Pet</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Encontre veterinários, passeadores, adestradores e os melhores profissionais para o seu pet perto de você.</p>
+        </div>
 
         {/* Filtros e Busca */}
-        <Card className="p-4 shadow-sm">
+        <Card className="border-0 md:border rounded-none md:rounded-xl shadow-none md:shadow-sm p-3 md:p-4">
           <CardContent className="p-0 space-y-3">
             {/* Busca por Texto */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome ou servico..."
-                className="pl-10"
+                className="pl-10 h-10 rounded-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
-            {/* Filtro por Tipo */}
-            <div className="flex space-x-3">
+            {/* Filtro por Tipo - Mobile Stack, Desktop Flex */}
+            <div className="flex flex-col md:flex-row gap-2 md:gap-3">
               <div className="relative flex-1">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Select
                   value={selectedType}
                   onValueChange={(value) => setSelectedType(value as ServiceType | 'all')}
                 >
-                  <SelectTrigger className="pl-10">
+                  <SelectTrigger className="pl-10 h-10 rounded-lg">
                     <SelectValue placeholder="Filtrar por tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -135,38 +137,43 @@ const ServiceProvidersPage: React.FC = () => {
               </div>
               
               {/* Filtro de Distancia */}
-              <div className="flex items-center gap-2 flex-1">
-                <Select value={maxDistance.toString()} onValueChange={(value) => setMaxDistance(parseInt(value))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Distancia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 km</SelectItem>
-                    <SelectItem value="10">10 km</SelectItem>
-                    <SelectItem value="25">25 km</SelectItem>
-                    <SelectItem value="50">50 km</SelectItem>
-                    <SelectItem value="100">100 km</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={maxDistance.toString()} onValueChange={(value) => setMaxDistance(parseInt(value))}>
+                <SelectTrigger className="h-10 rounded-lg md:w-32">
+                  <SelectValue placeholder="Distancia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 km</SelectItem>
+                  <SelectItem value="10">10 km</SelectItem>
+                  <SelectItem value="25">25 km</SelectItem>
+                  <SelectItem value="50">50 km</SelectItem>
+                  <SelectItem value="100">100 km</SelectItem>
+                </SelectContent>
+              </Select>
 
-              {/* Botao de Localizacao */}
+              {/* Botao de Localizacao - Full Width Mobile */}
               <Button
                 onClick={handleRequestLocation}
                 disabled={isLoadingLocation || !!userLocation}
                 variant={userLocation ? "default" : "outline"}
-                className="gap-2"
+                className="gap-2 h-10 rounded-lg w-full md:w-auto whitespace-nowrap"
               >
-                <Navigation className="h-4 w-4" />
-                {isLoadingLocation ? "Localizando..." : userLocation ? "Localizado" : "Usar minha localizacao"}
+                <Navigation className="h-4 w-4 shrink-0" />
+                <span className="hidden md:inline">
+                  {isLoadingLocation ? "Localizando..." : userLocation ? "Localizado" : "Usar minha localização"}
+                </span>
+                <span className="md:hidden text-xs">
+                  {isLoadingLocation ? "..." : userLocation ? "✓" : "Local"}
+                </span>
               </Button>
             </div>
 
             {/* Informacao de Localizacao */}
             {userLocation && (
-              <div className="text-sm text-muted-foreground p-2 bg-blue-50 rounded border border-blue-200">
-                <MapPin className="h-4 w-4 inline mr-2" />
-                Mostrando servicos ate {maxDistance}km de sua localizacao
+              <div className="text-xs md:text-sm text-muted-foreground p-2 md:p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span>Mostrando serviços até {maxDistance}km de sua localização</span>
+                </div>
               </div>
             )}
           </CardContent>
@@ -178,15 +185,15 @@ const ServiceProvidersPage: React.FC = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : filteredProviders.length > 0 ? (
-          <div className="grid gap-4">
+          <div className="grid gap-3 md:gap-4">
             {filteredProviders.map(provider => (
               <ProfessionalProfileCard key={provider.id} profile={provider} />
             ))}
           </div>
         ) : (
-          <div className="text-center p-10 border rounded-lg">
-            <h2 className="text-xl font-semibold mb-2">Nenhum Provedor Encontrado</h2>
-            <p className="text-gray-500">Tente ajustar os filtros ou a busca.</p>
+          <div className="text-center p-8 md:p-10 border border-dashed rounded-lg">
+            <h2 className="text-lg md:text-xl font-semibold mb-2">Nenhum Provedor Encontrado</h2>
+            <p className="text-sm md:text-base text-muted-foreground">Tente ajustar os filtros ou a busca.</p>
           </div>
         )}
       </div>

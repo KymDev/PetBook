@@ -66,12 +66,11 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPaused, setIsPaused] = useState(true);
-  const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
 
   const reactionTypes = [
-    { type: "patinha", emoji: <PawPrint className="h-4 w-4" />, label: t("feed.reactions.patinha"), color: "hover:text-primary" },
-    { type: "abraco", emoji: <Heart className="h-4 w-4" />, label: t("feed.reactions.abraco"), color: "hover:text-red-500" },
-    { type: "petisco", emoji: <Cookie className="h-4 w-4" />, label: t("feed.reactions.petisco"), color: "hover:text-yellow-600" },
+    { type: "patinha", emoji: <PawPrint className="h-5 w-5" />, label: t("feed.reactions.patinha"), color: "hover:text-primary" },
+    { type: "abraco", emoji: <Heart className="h-5 w-5" />, label: t("feed.reactions.abraco"), color: "hover:text-red-500" },
+    { type: "petisco", emoji: <Cookie className="h-5 w-5" />, label: t("feed.reactions.petisco"), color: "hover:text-yellow-600" },
   ];
 
   const isProfessional = profile?.account_type === 'professional';
@@ -93,12 +92,6 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       fetchPet();
     }
   }, [post.id, interactorId]);
-
-  useEffect(() => {
-    if (pet?.user_id) {
-      fetchAuthorProfile(pet.user_id);
-    }
-  }, [pet]);
 
   useEffect(() => {
     if (post.type === 'video' && videoRef.current) {
@@ -129,15 +122,6 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
       .eq("id", post.pet_id)
       .single();
     if (data) setPet(data as Pet);
-  };
-
-  const fetchAuthorProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) setAuthorProfile(data as UserProfile);
   };
 
   const fetchReactions = async () => {
@@ -195,58 +179,6 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
     }
   };
 
-  const createNotification = async (type: string, message: string) => {
-    const { data: postOwner, error: ownerError } = await supabase
-      .from("pets")
-      .select("user_id")
-      .eq("id", post.pet_id)
-      .single();
-
-    if (ownerError || !postOwner) return;
-
-    if (user?.id === postOwner.user_id) return;
-
-    const { data: existingNotif } = await supabase
-      .from("notifications")
-      .select("id")
-      .eq("type", type)
-      .eq("related_post_id", post.id)
-      .eq(isProfessional ? "author_user_id" : "related_pet_id", isProfessional ? user?.id : currentPet?.id)
-      .gt("created_at", new Date(Date.now() - 60000).toISOString())
-      .maybeSingle();
-
-    if (existingNotif) return;
-
-    const { data: ownerProfile } = await supabase
-      .from("user_profiles")
-      .select("account_type")
-      .eq("id", postOwner.user_id)
-      .single();
-
-    const isOwnerProfessional = ownerProfile?.account_type === 'professional';
-
-    const notificationData: any = {
-      type: type,
-      message: message,
-      is_read: false,
-      related_post_id: post.id
-    };
-
-    if (isOwnerProfessional) {
-      notificationData.related_user_id = postOwner.user_id;
-    } else {
-      notificationData.pet_id = post.pet_id;
-    }
-
-    if (isProfessional && user) {
-      notificationData.author_user_id = user.id;
-    } else if (currentPet) {
-      notificationData.related_pet_id = currentPet.id;
-    }
-
-    await supabase.from("notifications").insert(notificationData);
-  };
-
   const handleReaction = async (type: string) => {
     if (!interactorId) {
       toast({ title: t("auth.login_required"), description: t("auth.login_to_react"), variant: "destructive" });
@@ -274,10 +206,6 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
 
         await supabase.from("reactions").insert([reactionData]);
         setUserReactionType(type);
-
-        const reactionLabel = reactionTypes.find(rt => rt.type === type)?.label || type;
-        const interactorName = isProfessional ? profile?.full_name || t("common.professional") : currentPet?.name || t("common.pet");
-        await createNotification("reaction", `${interactorName} ${t("feed.reacted_with")} ${reactionLabel} ${t("feed.to_your_post")}`);
       }
       fetchReactions();
     } catch (error) {
@@ -304,85 +232,66 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         return;
       }
 
-      const interactorName = isProfessional ? profile?.full_name || t("common.professional") : currentPet?.name || t("common.pet");
-      await createNotification("comment", `${interactorName} ${t("feed.commented_on_post")}`);
-
       setNewComment("");
       fetchComments();
-      toast({ title: t("feed.comment_added") });
     } catch (error) {
       console.error("Erro ao comentar:", error);
     }
   };
 
-  const handleDelete = async () => {
-    const { error } = await supabase.from("posts").delete().eq("id", post.id);
-    if (error) {
-      toast({ title: t("feed.delete_error"), variant: "destructive" });
-    } else {
-      toast({ title: t("feed.delete_success") });
-      window.location.reload();
-    }
-  };
-
   const handleEdit = async () => {
     if (!editedDescription.trim()) return;
-    const { error } = await supabase
-      .from("posts")
-      .update({ description: editedDescription.trim() })
-      .eq("id", post.id);
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ description: editedDescription.trim() })
+        .eq("id", post.id);
 
-    if (error) {
-      toast({ title: t("feed.edit_error"), variant: "destructive" });
-    } else {
-      toast({ title: t("feed.edit_success") });
+      if (error) throw error;
       setIsEditing(false);
-      window.location.reload();
+      toast({ title: t("feed.post_updated") });
+    } catch (error) {
+      console.error("Erro ao editar post:", error);
+      toast({ title: t("feed.update_error"), variant: "destructive" });
     }
   };
 
-  const isAuthorProfessional = authorProfile?.account_type === 'professional';
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", post.id);
+
+      if (error) throw error;
+      toast({ title: t("feed.post_deleted") });
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao deletar post:", error);
+      toast({ title: t("feed.delete_error"), variant: "destructive" });
+    }
+  };
 
   return (
-    <Card className={cn(
-      "overflow-hidden border-0 shadow-sm mb-4 transition-all duration-300",
-      isAuthorProfessional ? "ring-2 ring-blue-500/20 shadow-blue-100/50" : "card-elevated"
-    )}>
-      <CardHeader className="flex flex-row items-center justify-between p-4 space-y-0">
+    <Card className="border-0 md:border md:rounded-xl rounded-none shadow-none bg-background w-full overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between p-3 md:p-4">
         <div className="flex items-center gap-3">
-          <Link to={`/pet/${post.pet_id}`} className="relative group">
-            <Avatar className={cn(
-              "h-10 w-10 transition-transform group-hover:scale-105",
-              isAuthorProfessional ? "ring-2 ring-blue-500 ring-offset-2" : "ring-1 ring-primary/10"
-            )}>
+          <Link to={`/pet/${pet?.id}`} className="flex items-center gap-3">
+            <Avatar className="h-9 w-9 border border-border">
               <AvatarImage src={pet?.avatar_url || undefined} />
-              <AvatarFallback className={isAuthorProfessional ? "bg-blue-500 text-white" : "bg-primary/5 text-primary"}>
-                {isAuthorProfessional ? <Stethoscope className="h-5 w-5" /> : pet?.name?.[0] || "?"}
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                {pet?.name?.[0] || "?"}
               </AvatarFallback>
             </Avatar>
-            {isAuthorProfessional && (
-              <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-0.5 shadow-sm border border-white">
-                <BadgeCheck className="h-3 w-3" />
-              </div>
-            )}
-          </Link>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <Link to={`/pet/${post.pet_id}`} className="font-bold text-sm hover:text-primary transition-colors">
-                {pet?.name}
-              </Link>
-              {isAuthorProfessional && (
-                <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest border border-blue-200">
-                  {t("common.professional")}
-                </span>
-              )}
+            <div className="flex flex-col">
+              <span className="text-sm font-bold leading-none hover:underline">{pet?.name}</span>
+              <span className="text-[10px] text-muted-foreground mt-1">
+                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: getDateLocale() })}
+              </span>
             </div>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: getDateLocale() })}
-            </p>
-          </div>
+          </Link>
         </div>
-        
+
         {isMyPost && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -394,7 +303,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
               <DropdownMenuItem onClick={() => setIsEditing(true)} className="gap-2">
                 <EditIcon className="h-4 w-4" /> {t("common.edit")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="gap-2 text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={handleDelete} className="text-red-600 gap-2">
                 <TrashIcon className="h-4 w-4" /> {t("common.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -417,7 +326,8 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
           </div>
         ) : (
           post.description && (
-            <div className="px-4 pb-3 text-sm leading-relaxed text-foreground/90 font-medium">
+            <div className="px-4 pb-3 text-sm leading-relaxed text-foreground/90">
+              <span className="font-bold mr-2">{pet?.name}</span>
               {post.description}
             </div>
           )
@@ -425,7 +335,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
 
         {post.media_url && (
           <div 
-            className="relative aspect-square bg-muted/20 cursor-pointer overflow-hidden group"
+            className="relative aspect-square bg-muted/20 cursor-pointer overflow-hidden"
             onClick={() => setLightboxOpen(true)}
           >
             {post.type === 'video' ? (
@@ -433,16 +343,14 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
                 <video 
                   ref={videoRef}
                   src={post.media_url} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                   loop
                   muted
                   playsInline
                 />
                 {isPaused && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <div className="bg-white/30 backdrop-blur-sm p-4 rounded-full">
-                      <Play className="h-8 w-8 text-white fill-white" />
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                    <Play className="h-12 w-12 text-white/80 fill-white/80" />
                   </div>
                 )}
               </div>
@@ -450,7 +358,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
               <img 
                 src={post.media_url} 
                 alt="Post content" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover"
                 loading="lazy"
               />
             )}
@@ -458,7 +366,7 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
         )}
       </CardContent>
 
-      <CardFooter className="flex flex-col p-4 pt-3 gap-4">
+      <CardFooter className="flex flex-col p-3 gap-2">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1">
             {reactionTypes.map((rt) => {
@@ -467,93 +375,64 @@ export const PostCard = ({ post, profile }: PostCardProps) => {
               const hasReacted = reaction?.hasReacted || false;
 
               return (
-                <Button
+                <button
                   key={rt.type}
-                  variant="ghost"
-                  size="sm"
                   onClick={() => handleReaction(rt.type)}
                   className={cn(
-                    "h-9 px-3 gap-2 rounded-full transition-all active:scale-90",
-                    hasReacted ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
-                    rt.color
+                    "p-2 transition-all active:scale-90 flex items-center gap-1",
+                    hasReacted ? "text-primary" : "text-foreground"
                   )}
                 >
                   <div className={cn(hasReacted && "animate-bounce")}>
                     {rt.emoji}
                   </div>
                   {count > 0 && <span className="text-xs font-bold">{count}</span>}
-                </Button>
+                </button>
               );
             })}
+            
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="p-2 text-foreground transition-all active:scale-90 flex items-center gap-1"
+            >
+              <CommentIcon className="h-6 w-6" />
+              {comments.length > 0 && <span className="text-xs font-bold">{comments.length}</span>}
+            </button>
           </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowComments(!showComments)}
-            className={cn(
-              "h-9 px-4 gap-2 rounded-full font-bold transition-all",
-              showComments ? "bg-primary/5 text-primary" : "text-muted-foreground hover:bg-muted"
-            )}
-          >
-            <CommentIcon className="h-4 w-4" />
-            <span className="text-xs">{comments.length}</span>
-          </Button>
         </div>
 
         {showComments && (
-          <div className="w-full space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="w-full space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {comments.map((comment) => {
                 const isCommentAuthorProf = comment.user_profile?.account_type === 'professional';
                 return (
-                  <div key={comment.id} className="flex gap-3">
-                    <Avatar className={cn(
-                      "h-8 w-8 shrink-0",
-                      isCommentAuthorProf ? "ring-1 ring-blue-500" : ""
-                    )}>
-                      <AvatarImage src={comment.pet?.avatar_url || comment.user_profile?.avatar_url || undefined} />
-                      <AvatarFallback className="text-[10px] font-bold">
-                        {isCommentAuthorProf ? <Stethoscope className="h-4 w-4" /> : (comment.pet?.name?.[0] || comment.user_profile?.full_name?.[0] || "?")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className={cn(
-                      "flex-1 p-3 rounded-2xl text-sm shadow-sm",
-                      isCommentAuthorProf ? "bg-blue-50 border border-blue-100" : "bg-muted/40"
-                    )}>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <p className="font-bold text-xs">
-                          {comment.pet?.name || comment.user_profile?.full_name}
-                        </p>
-                        {isCommentAuthorProf && (
-                          <BadgeCheck className="h-3 w-3 text-blue-500" />
-                        )}
-                      </div>
-                      <p className="text-foreground/80 leading-snug">{comment.text}</p>
-                      <p className="text-[9px] text-muted-foreground mt-2 font-bold uppercase tracking-tighter">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: getDateLocale() })}
-                      </p>
-                    </div>
+                  <div key={comment.id} className="flex gap-2 text-sm">
+                    <span className="font-bold shrink-0">
+                      {comment.pet?.name || comment.user_profile?.full_name}
+                    </span>
+                    <span className="text-foreground/90">{comment.text}</span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex gap-2 items-center bg-muted/30 p-1.5 rounded-2xl border border-border/50">
+            <div className="flex gap-2 items-center pt-2 border-t border-border/30">
               <Input
                 placeholder={t("feed.add_comment")}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleComment()}
-                className="border-0 bg-transparent focus-visible:ring-0 h-9 text-sm font-medium"
+                className="border-0 bg-transparent focus-visible:ring-0 h-8 text-sm p-0"
               />
               <Button 
                 onClick={handleComment} 
-                size="icon" 
-                className="h-9 w-9 rounded-xl gradient-bg shrink-0 shadow-sm active:scale-95 transition-transform"
+                variant="ghost"
+                size="sm"
+                className="text-primary font-bold h-8"
                 disabled={!newComment.trim()}
               >
-                <SendIcon className="h-4 w-4" />
+                {t("common.post")}
               </Button>
             </div>
           </div>
